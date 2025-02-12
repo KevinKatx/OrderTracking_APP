@@ -7,10 +7,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +27,17 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Icon
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 
 
 class MainActivity : ComponentActivity() {
@@ -40,8 +53,70 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             OrderTrackingAPPTheme {
-                LoginForm()
-                
+                AppNavigation()
+
+            }
+        }
+    }
+}
+
+
+class CustomButton(
+    val label: String,
+    val onClick: () -> Unit,
+    val iconId: Int,
+    val backgroundColor: Color = Color(0xFFF6B819),
+    val contentColor: Color = Color.Black
+) {
+    @Composable
+    fun CreateButton() {
+        var isPressed by remember { mutableStateOf(false) }
+
+        // Animate the button's background color
+        val animatedBackgroundColor by animateColorAsState(
+            targetValue = if (isPressed) Color.Black else backgroundColor
+        )
+
+        val contentColor by animateColorAsState(
+            targetValue = if (isPressed) Color(0xFFF6B819) else Color.Black,  // Toggle between yellow and black
+            label = "Button Icon Color Animation"
+        )
+        // Animate the scale of the button
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) 0.95f else 1f
+        )
+
+        Button(
+            onClick = {
+                isPressed = !isPressed  // Toggle pressed state
+                onClick()  // Call the provided onClick function
+            },
+            modifier = Modifier
+                .width(200.dp)
+                .height(120.dp)
+                .padding(10.dp)
+                .graphicsLayer(scaleX = scale, scaleY = scale)
+                .background(animatedBackgroundColor),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = animatedBackgroundColor,
+                contentColor = contentColor
+            )
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = iconId),
+                    contentDescription = label,
+                    modifier = Modifier.size(45.dp),
+                    tint = contentColor
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = label,
+                    color = contentColor
+                )
             }
         }
     }
@@ -51,9 +126,24 @@ class MainActivity : ComponentActivity() {
     widthDp=360,
     heightDp=806
 )
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "login") {
+        composable("home") {
+            HomeScreen(navController = navController)
+        }
+        composable("login") {
+            LoginScreen(navController = navController) // Your Login Screen Composable
+        }
+    }
+}
+
+
 
 @Composable
-fun LoginForm() {
+fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -72,7 +162,7 @@ fun LoginForm() {
             contentDescription = "My Image",
             modifier = Modifier
                 .size(600.dp)
-                .offset(y = -200.dp) // Adjust the image position
+                .offset(y = -215.dp) // Adjust the image position
         )
 
         // Center the column content
@@ -83,26 +173,32 @@ fun LoginForm() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Username:",
-                modifier = Modifier
-                    .align(Alignment.Start)
-                    .offset(x = 100.dp)
+
+            TextField(
+                value = email,
+                onValueChange = {email = it},
+                label = {Text("Username")},
+                singleLine = true,
             )
-            TextField(value = "", onValueChange = {})
             Spacer(modifier = Modifier.height(40.dp))
-            Text(
-                "Password:",
-                modifier = Modifier
-                    .align(Alignment.Start)
-                    .offset(x = 100.dp)
+
+            TextField(
+                value = password,
+                onValueChange = {password = it},
+                label = {Text("Password")},
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation() // Hides password
             )
-            TextField(value = "", onValueChange = {})
         }
 
         // Button placement
         SubmitBTN(onClick = {
-            text = "Button Clicked"
+            if(email == "admin" && password == "Password"){
+                navController.navigate("home")
+            } else {
+                Toast.makeText(context, "Invalid Username or Password!", Toast.LENGTH_SHORT).show()
+            }
+
         })
 
         // Forgot password and Register User links
@@ -148,4 +244,123 @@ fun SubmitBTN(onClick: () -> Unit) {
     ) {
         Text("Login")
     }
+}
+
+
+@Composable
+fun HomeScreen(navController: NavController){
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center // Align content in the top center
+
+    ){
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+                .align(Alignment.TopCenter)
+        )
+        Column(
+            modifier = Modifier
+                .offset(y= 110.dp)
+        ){
+
+            OrderBTN(onClick = {
+
+            })
+            InventoryBTN(onClick = {
+
+            })
+
+
+            DeliveryBTN(onClick = {
+
+            })
+            CustomerBTN(onClick = {
+
+            })
+
+            LogoutBTN(
+                onClick = {
+                    // You can add logic here if needed, such as logging out the user
+                    // Example: Clear user session or show a message
+                    Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
+                },
+                navController = navController // Pass the NavController here
+            )
+
+
+
+
+        }
+
+    }
+}
+
+
+
+@Composable
+fun OrderBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Order",
+        onClick = { /* Handle click action */ },
+        iconId = R.drawable.order, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun InventoryBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Inventory",
+        onClick = { /* Handle click action */ },
+        iconId = R.drawable.inventory, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun DeliveryBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Delivery",
+        onClick = { /* Handle click action */ },
+        iconId = R.drawable.delivery, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun CustomerBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Customer",
+        onClick = { /* Handle click action */ },
+        iconId = R.drawable.customer, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
+    val myButton = CustomButton(
+        label = "Logout",
+        onClick = {
+            navController.navigate("login") // Navigate to login screen
+        },
+        iconId = R.drawable.logout, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
 }
