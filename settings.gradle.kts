@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "OrderTrackingAPP"
 include(":app")
+include(":app")
+ 
