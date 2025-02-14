@@ -1,6 +1,11 @@
 package com.example.ordertrackingapp
 
-
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import android.graphics.Paint.Align
 import android.os.Bundle
 import android.widget.Toast
@@ -37,6 +42,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 
 
@@ -70,36 +76,39 @@ class CustomButton(
 ) {
     @Composable
     fun CreateButton() {
-        var isPressed by remember { mutableStateOf(false) }
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
 
-        // Animate the button's background color
+        // Animate the button's background color based on the pressed state
         val animatedBackgroundColor by animateColorAsState(
-            targetValue = if (isPressed) Color.Black else backgroundColor
+            targetValue = if (isPressed) Color.Black else backgroundColor,
+            label = "Button Background Color Animation"
         )
 
-        val contentColor by animateColorAsState(
-            targetValue = if (isPressed) Color(0xFFF6B819) else Color.Black,  // Toggle between yellow and black
-            label = "Button Icon Color Animation"
+        // Animate the content color based on the pressed state
+        val animatedContentColor by animateColorAsState(
+            targetValue = if (isPressed) Color(0xFFF6B819) else contentColor,
+            label = "Button Content Color Animation"
         )
-        // Animate the scale of the button
+
+        // Animate the scale of the button based on the pressed state
         val scale by animateFloatAsState(
-            targetValue = if (isPressed) 0.95f else 1f
+            targetValue = if (isPressed) 0.95f else 1f,
+            label = "Button Scale Animation"
         )
 
         Button(
-            onClick = {
-                isPressed = !isPressed  // Toggle pressed state
-                onClick()  // Call the provided onClick function
-            },
+            onClick = { onClick() }, // Call the provided onClick function
             modifier = Modifier
                 .width(200.dp)
                 .height(120.dp)
                 .padding(10.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .background(animatedBackgroundColor),
+                .graphicsLayer(scaleX = scale, scaleY = scale),
+            interactionSource = interactionSource, // Pass the interaction source
+            shape = RoundedCornerShape(8.dp), // Optional: Add rounded corners
             colors = ButtonDefaults.buttonColors(
                 containerColor = animatedBackgroundColor,
-                contentColor = contentColor
+                contentColor = animatedContentColor
             )
         ) {
             Column(
@@ -110,12 +119,12 @@ class CustomButton(
                     painter = painterResource(id = iconId),
                     contentDescription = label,
                     modifier = Modifier.size(45.dp),
-                    tint = contentColor
+                    tint = animatedContentColor // Use animated content color
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = label,
-                    color = contentColor
+                    color = animatedContentColor // Use animated content color
                 )
             }
         }
@@ -130,7 +139,7 @@ class CustomButton(
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "login") {
+    NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             HomeScreen(navController = navController)
         }
@@ -276,13 +285,15 @@ fun HomeScreen(navController: NavController){
 
             })
 
-
-            DeliveryBTN(onClick = {
+            AnalyticsBTN(onClick = {
 
             })
+
             CustomerBTN(onClick = {
 
             })
+
+
 
             LogoutBTN(
                 onClick = {
@@ -328,9 +339,9 @@ fun InventoryBTN(onClick: () -> Unit) {
 }
 
 @Composable
-fun DeliveryBTN(onClick: () -> Unit) {
+fun AnalyticsBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
-        label = "Delivery",
+        label = "Analytics",
         onClick = { /* Handle click action */ },
         iconId = R.drawable.delivery, // Replace with your icon
     )
