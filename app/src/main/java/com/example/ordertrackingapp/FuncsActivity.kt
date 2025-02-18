@@ -1,0 +1,171 @@
+package com.example.ordertrackingapp
+
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.example.ordertrackingapp.databases.Tables.Order
+import com.example.ordertrackingapp.databases.handlers.OrderHandler
+import java.time.LocalDate
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun OrderScreen(navController: NavController) {
+    val context = LocalContext.current
+    val orderHandler = OrderHandler(context)
+
+    var customerID by remember { mutableStateOf("") }
+    var totalPrice by remember { mutableStateOf("") }
+    var promoID by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("") }
+    var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var paymentType by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
+        TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
+        TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
+        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
+        TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
+        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val order = Order(
+                    customerID.toIntOrNull() ?: 0,
+                    totalPrice.toIntOrNull() ?: 0,
+                    promoID.toIntOrNull() ?: 0,
+                    status,
+                    LocalDate.parse(orderDate),
+                    paymentType
+                )
+                orderHandler.insertData(order)
+            }) {
+                Text("Insert")
+            }
+
+            Button(onClick = {
+                val orders = orderHandler.readData()
+                orders.forEach { Log.d("Order", it.toString()) }
+            }) {
+                Text("Read")
+            }
+
+            Button(onClick = {
+                val order = Order(
+                    customerID.toIntOrNull() ?: 0,
+                    totalPrice.toIntOrNull() ?: 0,
+                    promoID.toIntOrNull() ?: 0,
+                    status,
+                    LocalDate.parse(orderDate),
+                    paymentType
+                )
+                order.order_ID = 1 // Assume updating order with ID 1, modify as needed
+                orderHandler.updateData(order)
+            }) {
+                Text("Update")
+            }
+        }
+    }
+}
+
+
+
+
+
+@Composable
+fun ProductsScreen(navController: NavController){
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}
+
+@Composable
+fun InventoryScreen(navController: NavHostController) {
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}
+
+@Composable
+fun CustomerScreen(navController: NavHostController) {
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}
+
+@Composable
+fun AnalyticsScreen(navController: NavHostController) {
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}

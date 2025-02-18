@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.example.ordertrackingapp.databases.Tables.Order
@@ -61,32 +62,46 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
         if (result.moveToFirst()) {
             do {
-                val order = Order()
-
-                // Prevent column index errors
+                // Debug column indexes
                 val orderIDIndex = result.getColumnIndex("order_ID")
                 val customerIDIndex = result.getColumnIndex("customerID")
                 val totalPriceIndex = result.getColumnIndex("TotalPrice")
                 val promoIDIndex = result.getColumnIndex("PromoID")
-
                 val statusIndex = result.getColumnIndex("Status")
                 val orderDateIndex = result.getColumnIndex("OrderDate")
                 val paymentTypeIndex = result.getColumnIndex("PaymentType")
 
-                // Only set values if the column exists
-                if (orderIDIndex != -1) order.order_ID = result.getInt(orderIDIndex)
-                if (customerIDIndex != -1) order.customerID = result.getInt(customerIDIndex)
-                if (totalPriceIndex != -1) order.TotalPrice = result.getInt(totalPriceIndex)
-                if (promoIDIndex != -1) order.PromoID = result.getInt(promoIDIndex)
-
-                if (statusIndex != -1) order.Status = result.getString(statusIndex)
-                if (orderDateIndex != -1) {
-                    val dateString = result.getString(orderDateIndex)
-                    order.OrderDate = LocalDate.parse(dateString) // Converts string to LocalDate
+                if (orderIDIndex == -1 || customerIDIndex == -1 || totalPriceIndex == -1 ||
+                    promoIDIndex == -1 || statusIndex == -1 || orderDateIndex == -1 || paymentTypeIndex == -1) {
+                    Log.e("DB_ERROR", "One or more column names are incorrect!")
+                    continue
                 }
-                if (paymentTypeIndex != -1) order.PaymentType = result.getString(paymentTypeIndex)
+
+                // Get values
+                val orderID = result.getInt(orderIDIndex)
+                val customerID = result.getInt(customerIDIndex)
+                val totalPrice = result.getInt(totalPriceIndex)
+                val promoID = result.getInt(promoIDIndex)
+                val status = result.getString(statusIndex)
+                val paymentType = result.getString(paymentTypeIndex)
+
+                // Handle Date Parsing
+                val orderDateString = result.getString(orderDateIndex)
+                var orderDate: LocalDate? = null
+                try {
+                    orderDate = LocalDate.parse(orderDateString)
+                } catch (e: Exception) {
+                    Log.e("DB_ERROR", "Failed to parse date: $orderDateString", e)
+                }
+
+                val order = Order(customerID, totalPrice, promoID, status, orderDate ?: LocalDate.now(), paymentType)
+                order.order_ID = orderID
 
                 list.add(order)
+
+                // Debugging log
+                Log.d("DB_DEBUG", "Order Read: $order")
+
             } while (result.moveToNext())
         }
 

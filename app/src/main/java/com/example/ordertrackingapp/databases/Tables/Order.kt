@@ -45,4 +45,10 @@ class Order {
             .firstOrNull { it.name.endsWith("_ID") }
             ?.name?.removeSuffix("_ID") ?: "UnknownTable"
     }*/
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun toString(): String {
+        return "Order(order_ID=$order_ID, customerID=$customerID, TotalPrice=$TotalPrice, " +
+                "PromoID=$PromoID, Status=$Status, OrderDate=$OrderDate, PaymentType=$PaymentType)"
+    }
 }
