@@ -75,6 +75,9 @@ class MainActivity : ComponentActivity() {
 }
 
 
+
+
+
 class CustomButton(
     val label: String,
     val onClick: () -> Unit,
@@ -341,7 +344,6 @@ fun OrderScreen(navController: NavController) {
                     customerID.toIntOrNull() ?: 0,
                     totalPrice.toIntOrNull() ?: 0,
                     promoID.toIntOrNull() ?: 0,
-                    dishName,
                     status,
                     LocalDate.parse(orderDate),
                     paymentType
@@ -363,7 +365,6 @@ fun OrderScreen(navController: NavController) {
                     customerID.toIntOrNull() ?: 0,
                     totalPrice.toIntOrNull() ?: 0,
                     promoID.toIntOrNull() ?: 0,
-                    dishName,
                     status,
                     LocalDate.parse(orderDate),
                     paymentType

@@ -11,18 +11,21 @@ class Order {
     var customerID: Int = 0 // Foreign Key (FK1) to Customer
     var TotalPrice: Int = 0 // FK2 to Product
     var PromoID: Int = 0 // FK3 to Discount
-    var Dish_Name: String = ""
     var Status: String = ""
     @RequiresApi(Build.VERSION_CODES.O)
     var OrderDate: LocalDate = LocalDate.now()
     var PaymentType: String = ""
 
-    constructor(customerID: Int, TotalPrice: Int, PromoID: Int, Dish_Name: String,
+    @RequiresApi(Build.VERSION_CODES.O)
+    constructor(customerID: Int, TotalPrice: Int, PromoID: Int,
                 Status: String, OrderDate: LocalDate, PaymentType: String) {
         this.customerID = customerID
         this.TotalPrice = TotalPrice
         this.PromoID = PromoID
-        this.Dish_Name = Dish_Name
+        this.Status = Status
+        this.OrderDate = OrderDate
+        this.PaymentType = PaymentType
+
 
     }
     constructor(){}
