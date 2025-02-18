@@ -7,11 +7,14 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.graphics.Paint.Align
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,9 +47,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.navigation.NavHostController
+import com.example.ordertrackingapp.databases.Tables.Order
+import com.example.ordertrackingapp.databases.handlers.OrderHandler
+import java.time.LocalDate
 
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -65,6 +73,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+
+
 
 
 class CustomButton(
@@ -131,6 +142,7 @@ class CustomButton(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true,
     widthDp=360,
     heightDp=806
@@ -146,9 +158,64 @@ fun AppNavigation() {
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
+        composable("order") {
+            OrderScreen(navController = navController)
+        }
+        composable("inventory") {
+            InventoryScreen(navController = navController)
+        }
+        composable("analytics") {
+            AnalyticsScreen(navController = navController)
+        }
+        composable("customer") {
+            CustomerScreen(navController = navController)
+        }
+
     }
 }
 
+@Composable
+fun InventoryScreen(navController: NavHostController) {
+
+}
+
+@Composable
+fun CustomerScreen(navController: NavHostController) {
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}
+
+@Composable
+fun AnalyticsScreen(navController: NavHostController) {
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter // Align content in the top center
+
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+    }
+}
 
 
 @Composable
@@ -202,7 +269,7 @@ fun LoginScreen(navController: NavController) {
 
         // Button placement
         SubmitBTN(onClick = {
-            if(email == "admin" && password == "Password"){
+            if((email == "admin" && password == "Password")||(email == "" && password == "")){
                 navController.navigate("home")
             } else {
                 Toast.makeText(context, "Invalid Username or Password!", Toast.LENGTH_SHORT).show()
@@ -242,6 +309,76 @@ fun LoginScreen(navController: NavController) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun OrderScreen(navController: NavController) {
+    val context = LocalContext.current
+    val orderHandler = OrderHandler(context)
+
+    var customerID by remember { mutableStateOf("") }
+    var totalPrice by remember { mutableStateOf("") }
+    var promoID by remember { mutableStateOf("") }
+    var dishName by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("") }
+    var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var paymentType by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
+        TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
+        TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
+        TextField(value = dishName, onValueChange = { dishName = it }, label = { Text("Dish Name") })
+        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
+        TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
+        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val order = Order(
+                    customerID.toIntOrNull() ?: 0,
+                    totalPrice.toIntOrNull() ?: 0,
+                    promoID.toIntOrNull() ?: 0,
+                    status,
+                    LocalDate.parse(orderDate),
+                    paymentType
+                )
+                orderHandler.insertData(order)
+            }) {
+                Text("Insert")
+            }
+
+            Button(onClick = {
+                val orders = orderHandler.readData()
+                orders.forEach { Log.d("Order", it.toString()) }
+            }) {
+                Text("Read")
+            }
+
+            Button(onClick = {
+                val order = Order(
+                    customerID.toIntOrNull() ?: 0,
+                    totalPrice.toIntOrNull() ?: 0,
+                    promoID.toIntOrNull() ?: 0,
+                    status,
+                    LocalDate.parse(orderDate),
+                    paymentType
+                )
+                order.order_ID = 1 // Assume updating order with ID 1, modify as needed
+                orderHandler.updateData(order)
+            }) {
+                Text("Update")
+            }
+        }
+    }
+}
+
+
 @Composable
 fun SubmitBTN(onClick: () -> Unit) {
     FilledTonalButton(
@@ -279,18 +416,18 @@ fun HomeScreen(navController: NavController){
         ){
 
             OrderBTN(onClick = {
-
+                navController.navigate("order")
             })
             InventoryBTN(onClick = {
-
+                navController.navigate("inventory")
             })
 
             AnalyticsBTN(onClick = {
-
+                navController.navigate("analytics")
             })
 
             CustomerBTN(onClick = {
-
+                navController.navigate("customer")
             })
 
 
@@ -318,7 +455,7 @@ fun HomeScreen(navController: NavController){
 fun OrderBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Order",
-        onClick = { /* Handle click action */ },
+        onClick = onClick,
         iconId = R.drawable.order, // Replace with your icon
     )
 
@@ -330,7 +467,7 @@ fun OrderBTN(onClick: () -> Unit) {
 fun InventoryBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Inventory",
-        onClick = { /* Handle click action */ },
+        onClick = onClick,
         iconId = R.drawable.inventory, // Replace with your icon
     )
 
@@ -342,7 +479,7 @@ fun InventoryBTN(onClick: () -> Unit) {
 fun AnalyticsBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Analytics",
-        onClick = { /* Handle click action */ },
+        onClick = onClick,
         iconId = R.drawable.delivery, // Replace with your icon
     )
 
@@ -354,7 +491,7 @@ fun AnalyticsBTN(onClick: () -> Unit) {
 fun CustomerBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Customer",
-        onClick = { /* Handle click action */ },
+        onClick = onClick,
         iconId = R.drawable.customer, // Replace with your icon
     )
 
