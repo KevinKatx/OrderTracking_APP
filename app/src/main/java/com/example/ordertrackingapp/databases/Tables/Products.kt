@@ -5,10 +5,13 @@ import kotlin.reflect.full.memberProperties
 
 class Products {
     var Product_ID: Int = 0
-    var IngredientID: MutableList<Ingredients> = mutableListOf()
-    var Price: Int = 0
-    var ProductName: String = ""
+    var Ingredient_ID: Int = 0
+    var Price: Float = 0F
+    var Product_Name: String = ""
+    var Dish_Name: String = ""
+    var Quantity: Int = 0
 
+    constructor()
     // Returns columns
     fun getColumns(): List<String> {
         val properties = this::class.memberProperties.map { it.name }

@@ -17,7 +17,6 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 "customerID INTEGER, " +
                 "TotalPrice INTEGER, " +
                 "PromoID INTEGER, " +
-                "Dish_Name TEXT, " +
                 "Status TEXT, " +
                 "OrderDate TEXT DEFAULT (date('now')), " +
                 "PaymentType TEXT)"
@@ -36,7 +35,6 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
             put("customerID", order.customerID)
             put("TotalPrice", order.TotalPrice)
             put("PromoID", order.PromoID)
-            put("Dish_Name", order.Dish_Name)
             put("Status", order.Status)
             put("OrderDate", order.OrderDate.toString()) // Ensure it's stored as a string
             put("PaymentType", order.PaymentType)
@@ -70,7 +68,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 val customerIDIndex = result.getColumnIndex("customerID")
                 val totalPriceIndex = result.getColumnIndex("TotalPrice")
                 val promoIDIndex = result.getColumnIndex("PromoID")
-                val dishNameIndex = result.getColumnIndex("Dish_Name")
+
                 val statusIndex = result.getColumnIndex("Status")
                 val orderDateIndex = result.getColumnIndex("OrderDate")
                 val paymentTypeIndex = result.getColumnIndex("PaymentType")
@@ -80,7 +78,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 if (customerIDIndex != -1) order.customerID = result.getInt(customerIDIndex)
                 if (totalPriceIndex != -1) order.TotalPrice = result.getInt(totalPriceIndex)
                 if (promoIDIndex != -1) order.PromoID = result.getInt(promoIDIndex)
-                if (dishNameIndex != -1) order.Dish_Name = result.getString(dishNameIndex)
+
                 if (statusIndex != -1) order.Status = result.getString(statusIndex)
                 if (orderDateIndex != -1) {
                     val dateString = result.getString(orderDateIndex)
@@ -106,7 +104,6 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         cv.put("customerID", order.customerID)
         cv.put("TotalPrice", order.TotalPrice)
         cv.put("PromoID", order.PromoID)
-        cv.put("Dish_Name", order.Dish_Name)
         cv.put("Status", order.Status)
         cv.put("OrderDate", order.OrderDate.toString()) // Convert LocalDate to String
         cv.put("PaymentType", order.PaymentType)
