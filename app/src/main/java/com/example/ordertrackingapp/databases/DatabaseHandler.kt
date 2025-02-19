@@ -15,6 +15,7 @@ class DatabaseHandler(
 
     override fun onCreate(db: SQLiteDatabase?) {
         val createTableQuery = createTableQuery()
+        db?.execSQL(createTableQuery)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
