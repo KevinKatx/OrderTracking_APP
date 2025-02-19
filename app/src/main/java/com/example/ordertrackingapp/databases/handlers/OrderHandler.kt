@@ -14,7 +14,7 @@ import java.time.LocalDate
 class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
     override fun onCreate(db: SQLiteDatabase?){
         val createTable = "CREATE TABLE Orders (" +
-                "order_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "orderID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "customerID INTEGER, " +
                 "TotalPrice INTEGER, " +
                 "PromoID INTEGER, " +
@@ -34,11 +34,11 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         val db = this.writableDatabase
         val cv = ContentValues().apply {
             put("customerID", order.customerID)
-            put("TotalPrice", order.TotalPrice)
-            put("PromoID", order.PromoID)
-            put("Status", order.Status)
-            put("OrderDate", order.OrderDate.toString()) // Ensure it's stored as a string
-            put("PaymentType", order.PaymentType)
+            put("TotalPrice", order.totalPrice)
+            put("PromoID", order.promoID)
+            put("Status", order.status)
+            put("OrderDate", order.orderDate.toString()) // Ensure it's stored as a string
+            put("PaymentType", order.paymentType)
         }
 
         val result = db.insert("Orders", null, cv)
@@ -54,16 +54,24 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun readData(): MutableList<Order> {
+    fun readData(orderID: Int? = null): MutableList<Order> {
         val list: MutableList<Order> = ArrayList()
         val db = this.readableDatabase
-        val query = "SELECT * FROM Orders"
-        val result = db.rawQuery(query, null)
+        val query = if (orderID != null) {
+            "SELECT * FROM Orders WHERE orderID = ?"
+        } else {
+            "SELECT * FROM Orders"
+        }
+        val result = if (orderID != null) {
+            db.rawQuery(query, arrayOf(orderID.toString()))
+        } else {
+            db.rawQuery(query, null)
+        }
 
         if (result.moveToFirst()) {
             do {
                 // Debug column indexes
-                val orderIDIndex = result.getColumnIndex("order_ID")
+                val orderIDIndex = result.getColumnIndex("orderID")
                 val customerIDIndex = result.getColumnIndex("customerID")
                 val totalPriceIndex = result.getColumnIndex("TotalPrice")
                 val promoIDIndex = result.getColumnIndex("PromoID")
@@ -95,12 +103,12 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 }
 
                 val order = Order(customerID, totalPrice, promoID, status, orderDate ?: LocalDate.now(), paymentType)
-                order.order_ID = orderID
+                order.orderID = orderID
 
                 list.add(order)
 
-                // Debugging log
-                Log.d("DB_DEBUG", "Order Read: $order")
+
+
 
             } while (result.moveToNext())
         }
@@ -117,14 +125,14 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
         // Setting updated values
         cv.put("customerID", order.customerID)
-        cv.put("TotalPrice", order.TotalPrice)
-        cv.put("PromoID", order.PromoID)
-        cv.put("Status", order.Status)
-        cv.put("OrderDate", order.OrderDate.toString()) // Convert LocalDate to String
-        cv.put("PaymentType", order.PaymentType)
+        cv.put("TotalPrice", order.totalPrice)
+        cv.put("PromoID", order.promoID)
+        cv.put("Status", order.status)
+        cv.put("OrderDate", order.orderDate.toString()) // Convert LocalDate to String
+        cv.put("PaymentType", order.paymentType)
 
-        // Updating the row where order_ID matches
-        val result = db.update("Orders", cv, "order_ID = ?", arrayOf(order.order_ID.toString()))
+        // Updating the row where orderID matches
+        val result = db.update("Orders", cv, "orderID = ?", arrayOf(order.orderID.toString()))
 
         db.close()
         return result // Returns number of rows affected
