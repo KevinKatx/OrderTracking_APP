@@ -172,6 +172,10 @@ fun AppNavigation() {
             ProductsScreen(navController = navController)
         }
 
+        composable("order_edit"){
+            OrderEdit(navController=navController)
+        }
+
     }
 }
 
