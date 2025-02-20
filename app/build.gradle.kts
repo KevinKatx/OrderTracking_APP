@@ -40,6 +40,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.core.ktx)

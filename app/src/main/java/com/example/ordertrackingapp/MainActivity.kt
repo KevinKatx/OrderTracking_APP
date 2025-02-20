@@ -161,61 +161,26 @@ fun AppNavigation() {
         composable("order") {
             OrderScreen(navController = navController)
         }
-        composable("inventory") {
-            InventoryScreen(navController = navController)
-        }
+
         composable("analytics") {
             AnalyticsScreen(navController = navController)
         }
         composable("customer") {
             CustomerScreen(navController = navController)
         }
+        composable("products"){
+            ProductsScreen(navController = navController)
+        }
+
+        composable("order_edit"){
+            OrderEdit(navController=navController)
+        }
 
     }
 }
 
-@Composable
-fun InventoryScreen(navController: NavHostController) {
 
-}
 
-@Composable
-fun CustomerScreen(navController: NavHostController) {
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.TopCenter // Align content in the top center
-
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp) // Adjust the image position
-        )
-    }
-}
-
-@Composable
-fun AnalyticsScreen(navController: NavHostController) {
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.TopCenter // Align content in the top center
-
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp) // Adjust the image position
-        )
-    }
-}
 
 
 @Composable
@@ -309,74 +274,6 @@ fun LoginScreen(navController: NavController) {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun OrderScreen(navController: NavController) {
-    val context = LocalContext.current
-    val orderHandler = OrderHandler(context)
-
-    var customerID by remember { mutableStateOf("") }
-    var totalPrice by remember { mutableStateOf("") }
-    var promoID by remember { mutableStateOf("") }
-    var dishName by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("") }
-    var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
-    var paymentType by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
-        TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
-        TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
-        TextField(value = dishName, onValueChange = { dishName = it }, label = { Text("Dish Name") })
-        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
-        TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
-        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                val order = Order(
-                    customerID.toIntOrNull() ?: 0,
-                    totalPrice.toIntOrNull() ?: 0,
-                    promoID.toIntOrNull() ?: 0,
-                    status,
-                    LocalDate.parse(orderDate),
-                    paymentType
-                )
-                orderHandler.insertData(order)
-            }) {
-                Text("Insert")
-            }
-
-            Button(onClick = {
-                val orders = orderHandler.readData()
-                orders.forEach { Log.d("Order", it.toString()) }
-            }) {
-                Text("Read")
-            }
-
-            Button(onClick = {
-                val order = Order(
-                    customerID.toIntOrNull() ?: 0,
-                    totalPrice.toIntOrNull() ?: 0,
-                    promoID.toIntOrNull() ?: 0,
-                    status,
-                    LocalDate.parse(orderDate),
-                    paymentType
-                )
-                order.order_ID = 1 // Assume updating order with ID 1, modify as needed
-                orderHandler.updateData(order)
-            }) {
-                Text("Update")
-            }
-        }
-    }
-}
 
 
 @Composable
@@ -418,8 +315,8 @@ fun HomeScreen(navController: NavController){
             OrderBTN(onClick = {
                 navController.navigate("order")
             })
-            InventoryBTN(onClick = {
-                navController.navigate("inventory")
+            ProductsBTN(onClick = {
+                navController.navigate("products")
             })
 
             AnalyticsBTN(onClick = {
@@ -464,9 +361,9 @@ fun OrderBTN(onClick: () -> Unit) {
 }
 
 @Composable
-fun InventoryBTN(onClick: () -> Unit) {
+fun ProductsBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
-        label = "Inventory",
+        label = "Products",
         onClick = onClick,
         iconId = R.drawable.inventory, // Replace with your icon
     )
