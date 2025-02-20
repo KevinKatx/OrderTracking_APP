@@ -5,8 +5,8 @@ import kotlin.reflect.full.memberProperties
 
 class Customer {
     var Customer_ID: Int = 0 // Primary Key
-    var CompletedOrder: MutableList<Order> = mutableListOf() // Foreign Key Orders
-    var CurrentOrder: MutableList<Order> = mutableListOf() // Foreign Key Orders
+    var CompletedOrder: String = "" // Foreign Key Orders
+    var CurrentOrder: String = "" // Foreign Key Orders
     var Name: String = ""
     var Type: String = ""
     var Address: String = ""

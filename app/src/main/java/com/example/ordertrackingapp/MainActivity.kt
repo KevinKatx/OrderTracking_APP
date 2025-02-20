@@ -172,9 +172,13 @@ fun AppNavigation() {
             ProductsScreen(navController = navController)
         }
 
-        composable("order_edit"){
-            OrderEdit(navController=navController)
+        composable("order_edit/{id}") { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("id")
+            if (orderId != null) {
+                OrderEdit(navController = navController, orderId.toInt())
+            }
         }
+
 
     }
 }
