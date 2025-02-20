@@ -86,10 +86,24 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 val orderDateIndex = result.getColumnIndex("OrderDate")
                 val paymentTypeIndex = result.getColumnIndex("PaymentType")
 
+                Log.d("DB_DEBUG", "orderID index: $orderIDIndex")
+                Log.d("DB_DEBUG", "customerID index: $customerIDIndex")
+                Log.d("DB_DEBUG", "TotalPrice index: $totalPriceIndex")
+                Log.d("DB_DEBUG", "PromoID index: $promoIDIndex")
+                Log.d("DB_DEBUG", "Status index: $statusIndex")
+                Log.d("DB_DEBUG", "OrderDate index: $orderDateIndex")
+                Log.d("DB_DEBUG", "PaymentType index: $paymentTypeIndex")
+
                 if (orderIDIndex == -1 || customerIDIndex == -1 || totalPriceIndex == -1 ||
                     promoIDIndex == -1 || statusIndex == -1 || orderDateIndex == -1 || paymentTypeIndex == -1) {
 
-                    Log.e("DB_ERROR", "One or more column names are incorrect!")
+                    if (orderIDIndex == -1) Log.e("DB_ERROR", "Column 'orderID' is missing!")
+                    if (customerIDIndex == -1) Log.e("DB_ERROR", "Column 'customerID' is missing!")
+                    if (totalPriceIndex == -1) Log.e("DB_ERROR", "Column 'TotalPrice' is missing!")
+                    if (promoIDIndex == -1) Log.e("DB_ERROR", "Column 'PromoID' is missing!")
+                    if (statusIndex == -1) Log.e("DB_ERROR", "Column 'Status' is missing!")
+                    if (orderDateIndex == -1) Log.e("DB_ERROR", "Column 'OrderDate' is missing!")
+                    if (paymentTypeIndex == -1) Log.e("DB_ERROR", "Column 'PaymentType' is missing!")
                     continue
                 }
 
