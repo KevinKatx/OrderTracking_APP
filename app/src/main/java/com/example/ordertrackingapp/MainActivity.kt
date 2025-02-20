@@ -179,6 +179,12 @@ fun AppNavigation() {
             }
         }
 
+        composable("customer_edit/{id}") { backStackEntry ->
+            val customerId = backStackEntry.arguments?.getString("id")
+            if (customerId != null) {
+                OrderEdit(navController = navController, customerId.toInt())
+            }
+        }
 
     }
 }
