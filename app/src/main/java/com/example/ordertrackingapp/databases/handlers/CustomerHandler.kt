@@ -4,16 +4,27 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import com.example.ordertrackingapp.databases.Tables.Customer
-import com.example.ordertrackingapp.databases.Tables.Order
-import java.time.LocalDate
 
 
 class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1) {
+    fun createTable() {
+        val db = writableDatabase
+        val createCustomerTableQuery = """
+        CREATE TABLE Customers (
+            customerID INTEGER PRIMARY KEY AUTOINCREMENT, 
+            CompletedOrder TEXT, 
+            CurrentOrder INTEGER, 
+            name TEXT, 
+            type TEXT, 
+            address TEXT
+        )
+    """.trimIndent()
+
+        db.execSQL(createCustomerTableQuery)
+    }
     override fun onCreate(db: SQLiteDatabase?) {
         val createTable = "CREATE TABLE Customers (" +
                 "customerID INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -25,10 +36,10 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
 
         db?.execSQL(createTable)
 
-        val insertDummyOrder = "INSERT INTO Customers (CompletedOrder, CurrentOrder, name, type, address) " +
-                "VALUES ('1, 2, 3', 4, 'lol', 'Active', '0007 Credit Card St., Metro Manila, Manila ')"
+        val insertDummyCustomer = "INSERT INTO Customers (customerID, name, type, address) " +
+                "VALUES (4201337, 'John Doe', 'Regular', '123 Main St')"
 
-        db?.execSQL(insertDummyOrder)
+        db?.execSQL(insertDummyCustomer)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {

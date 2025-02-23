@@ -6,21 +6,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import android.graphics.Paint.Align
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,23 +29,13 @@ import com.example.ordertrackingapp.ui.theme.OrderTrackingAPPTheme
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.navigation.NavHostController
-import com.example.ordertrackingapp.databases.Tables.Order
-import com.example.ordertrackingapp.databases.handlers.OrderHandler
-import java.time.LocalDate
 
 
 class MainActivity : ComponentActivity() {
@@ -65,6 +50,7 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.statusBars()) // ✅ This works on lower APIs
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+
         setContent {
             OrderTrackingAPPTheme {
                 AppNavigation()
@@ -72,6 +58,8 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
 }
 
 
@@ -171,6 +159,13 @@ fun AppNavigation() {
         composable("products"){
             ProductsScreen(navController = navController)
         }
+        composable("order_insert"){
+            OrderInsert(navController=navController)
+        }
+
+        composable("see_menu"){
+            seeMenu(navController=navController)
+        }
 
         composable("order_edit/{id}") { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("id")
@@ -178,6 +173,8 @@ fun AppNavigation() {
                 OrderEdit(navController = navController, orderId.toInt())
             }
         }
+
+
 
         composable("customer_edit/{id}") { backStackEntry ->
             val customerId = backStackEntry.arguments?.getString("id")

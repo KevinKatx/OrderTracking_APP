@@ -1,8 +1,6 @@
 package com.example.ordertrackingapp
 
-import android.annotation.SuppressLint
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
@@ -25,27 +23,27 @@ import androidx.navigation.NavHostController
 import com.example.ordertrackingapp.databases.Tables.Order
 import com.example.ordertrackingapp.databases.handlers.OrderHandler
 import java.time.LocalDate
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun OrderScreen(navController: NavController) {
     val context = LocalContext.current
-    val orderHandler = OrderHandler(context)
+    val orderHandler = remember { OrderHandler(context) }
     val orders = remember { mutableStateOf(orderHandler.readData()) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LazyColumn(modifier = Modifier.weight(1f)) {
-            val orders = orderHandler.readData()
-
-            items(orders) { order ->
+            items(orders.value) { order ->
                 val isSelected = selectedOrder?.orderID == order.orderID
                 Card(
                     modifier = Modifier
@@ -69,23 +67,18 @@ fun OrderScreen(navController: NavController) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                navController.navigate("order_edit")
-            }) {
+            Button(onClick = { navController.navigate("order_insert") }) {
                 Text("Insert")
             }
 
-            Button(onClick = {
-                orders.value = orderHandler.readData()
-            }) {
+            Button(onClick = { orders.value = orderHandler.readData() }) {
                 Text("Read")
             }
 
-            Button(onClick = {
-                selectedOrder?.let {
-                    navController.navigate("order_edit/${it.orderID}")
-                }
-            }, enabled = selectedOrder != null) {
+            Button(
+                onClick = { selectedOrder?.let { navController.navigate("order_edit/${it.orderID}") } },
+                enabled = selectedOrder != null
+            ) {
                 Text("Edit")
             }
         }
@@ -99,6 +92,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val orderHandler = OrderHandler(context)
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
+    var productID by remember { mutableStateOf(order.value?.productID?.toString() ?: "")}
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
     var totalPrice by remember { mutableStateOf(order.value?.totalPrice?.toString() ?: "") }
     var promoID by remember { mutableStateOf(order.value?.promoID?.toString() ?: "") }
@@ -107,10 +101,13 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     var paymentType by remember { mutableStateOf(order.value?.paymentType ?: "") }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        TextField(value = productID, onValueChange = { productID = it }, label = {Text("Product ID")})
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
@@ -121,13 +118,14 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 val updatedOrder = Order(
+                    productID.toIntOrNull() ?: 0,
                     customerID.toIntOrNull() ?: 0,
-                    totalPrice.toIntOrNull() ?: 0,
+                    totalPrice.toFloatOrNull() ?: 0f,
                     promoID.toIntOrNull() ?: 0,
                     status,
                     LocalDate.parse(orderDate),
                     paymentType
-                ).apply { orderID?.let { this.orderID = it } }
+                ).apply {if (orderID != null) this.orderID = orderID }
 
                 if (orderID != null) {
                     orderHandler.updateData(updatedOrder)
@@ -139,11 +137,97 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 Text("OK")
             }
 
-            Button(onClick = {
-                navController.popBackStack()
-            }) {
+            Button(onClick = { navController.popBackStack() }) {
                 Text("Back")
             }
+        }
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun OrderInsert(navController: NavController) {
+    val context = LocalContext.current
+    val orderHandler = OrderHandler(context)
+
+    var productID by remember { mutableStateOf("") }
+    var customerID by remember { mutableStateOf("") }
+    var totalPrice by remember { mutableStateOf("") }
+    var promoID by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("") }
+    var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var paymentType by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(value = productID, onValueChange =  {productID = it}, label = {Text("Product ID")})
+        TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
+        TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
+        TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
+        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
+        TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
+        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val newOrder = Order(
+                    productID.toIntOrNull() ?: 0,
+                    customerID.toIntOrNull() ?: 0,
+                    totalPrice.toFloatOrNull() ?: 0f,
+                    promoID.toIntOrNull() ?: 0,
+                    status,
+                    LocalDate.parse(orderDate),
+                    paymentType
+                )
+                orderHandler.insertData(newOrder)
+                navController.popBackStack()
+            }) {
+                Text("Insert")
+            }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Back")
+            }
+        }
+    }
+}
+
+
+
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun seeMenu(navController: NavController) {
+    val menuItems = listOf("Product 1", "Product 2", "Product 3")
+    var selectedProduct by remember { mutableStateOf(menuItems.first()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Select a Product:")
+        menuItems.forEach { product ->
+            Row(modifier = Modifier.clickable { selectedProduct = product }) {
+                RadioButton(selected = selectedProduct == product, onClick = { selectedProduct = product })
+                Text(text = product, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+
+        Button(onClick = {
+            navController.previousBackStackEntry?.savedStateHandle?.set("selectedProduct", selectedProduct)
+            navController.popBackStack()
+        }) {
+            Text("OK")
         }
     }
 }

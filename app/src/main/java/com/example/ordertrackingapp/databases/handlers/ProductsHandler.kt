@@ -8,11 +8,22 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.example.ordertrackingapp.databases.Tables.Order
 import com.example.ordertrackingapp.databases.Tables.Products
-import java.time.LocalDate
 
 class ProductsHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
+    fun createTable() {
+        val db = writableDatabase
+        val createProductTableQuery = """
+        CREATE TABLE IF NOT EXISTS Products (
+            productID INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            price REAL NOT NULL,
+            stock INTEGER NOT NULL
+        )
+    """.trimIndent()
+        db.execSQL(createProductTableQuery)
+    }
+
     override fun onCreate(db: SQLiteDatabase?){
         val createTable = "CREATE TABLE Products (" +
                 "prod_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -23,6 +34,10 @@ class ProductsHandler (var context: Context) : SQLiteOpenHelper(context,"FoodSto
                 "quantity INTEGER)"
 
         db?.execSQL(createTable)
+
+        val insertDummyProduct = "INSERT INTO Products (prod_ID, ingredient_ID, dish_name, price, prod_name, quantity) " +
+                "VALUES (4201337, 1, 'Sample Dish', 9.99, 'Sample Product', 10)"
+        db?.execSQL(insertDummyProduct)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {

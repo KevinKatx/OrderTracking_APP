@@ -12,23 +12,45 @@ import com.example.ordertrackingapp.databases.Tables.Order
 import java.time.LocalDate
 
 class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
+
+    init {
+        ProductsHandler(context).createTable()
+        CustomerHandler(context).createTable()
+        PromosHandler(context).createTable()
+    }
+
     override fun onCreate(db: SQLiteDatabase?){
-        val createTable = "CREATE TABLE Orders (" +
+        val createOrdersTable = "CREATE TABLE Orders (" +
                 "orderID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "customerID INTEGER, " +
-                "TotalPrice INTEGER, " +
+                "TotalPrice FLOAT, " +
                 "PromoID INTEGER, " +
                 "Status TEXT, " +
                 "OrderDate TEXT DEFAULT (date('now')), " +
-                "PaymentType TEXT)"
+                "PaymentType TEXT, " +
+                "FOREIGN KEY(customerID) REFERENCES Customers(customerID), " +
+                "FOREIGN KEY(PromoID) REFERENCES Promos(promo_ID)" +
+                ")"
 
-        db?.execSQL(createTable)
+        val createOrderDetailsTable = "CREATE TABLE OrderDetails (" +
+                "orderID INTEGER, " +
+                "productID INTEGER, " +
+                "quantity INTEGER NOT NULL DEFAULT 1, " +
+                "PRIMARY KEY(orderID, productID), " +
+                "FOREIGN KEY(orderID) REFERENCES Orders(orderID) ON DELETE CASCADE, " +
+                "FOREIGN KEY(productID) REFERENCES Products(prod_ID) ON DELETE CASCADE" +
+                ")"
 
-        val insertDummyOrder = "INSERT INTO Orders (customerID, TotalPrice, PromoID, Status, PaymentType) " +
-                "VALUES (1, 100, 0, 'Pending', 'Credit Card')"
+        db?.execSQL(createOrdersTable)
+        db?.execSQL(createOrderDetailsTable)
 
+        val insertDummyOrder = "INSERT INTO Orders (orderID, customerID, TotalPrice, PromoID, Status, PaymentType) " +
+                "VALUES (4201337, 4201337, 100, 4201337, 'Pending', 'Credit Card')"
         db?.execSQL(insertDummyOrder)
 
+        val insertDummyOrderDetails = "INSERT INTO OrderDetails (orderID, productID, quantity) " +
+                "VALUES (4201337, 4201337, 10)"
+        db?.execSQL(insertDummyOrderDetails)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -40,6 +62,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
     fun insertData(order : Order): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues().apply {
+            put("productID", order.productID)
             put("customerID", order.customerID)
             put("TotalPrice", order.totalPrice)
             put("PromoID", order.promoID)
@@ -77,7 +100,6 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
         if (result.moveToFirst()) {
             do {
-                // Ensure columns match exactly
                 val orderIDIndex = result.getColumnIndex("orderID")
                 val customerIDIndex = result.getColumnIndex("customerID")
                 val totalPriceIndex = result.getColumnIndex("TotalPrice")
@@ -86,36 +108,19 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 val orderDateIndex = result.getColumnIndex("OrderDate")
                 val paymentTypeIndex = result.getColumnIndex("PaymentType")
 
-                Log.d("DB_DEBUG", "orderID index: $orderIDIndex")
-                Log.d("DB_DEBUG", "customerID index: $customerIDIndex")
-                Log.d("DB_DEBUG", "TotalPrice index: $totalPriceIndex")
-                Log.d("DB_DEBUG", "PromoID index: $promoIDIndex")
-                Log.d("DB_DEBUG", "Status index: $statusIndex")
-                Log.d("DB_DEBUG", "OrderDate index: $orderDateIndex")
-                Log.d("DB_DEBUG", "PaymentType index: $paymentTypeIndex")
-
                 if (orderIDIndex == -1 || customerIDIndex == -1 || totalPriceIndex == -1 ||
                     promoIDIndex == -1 || statusIndex == -1 || orderDateIndex == -1 || paymentTypeIndex == -1) {
-
-                    if (orderIDIndex == -1) Log.e("DB_ERROR", "Column 'orderID' is missing!")
-                    if (customerIDIndex == -1) Log.e("DB_ERROR", "Column 'customerID' is missing!")
-                    if (totalPriceIndex == -1) Log.e("DB_ERROR", "Column 'TotalPrice' is missing!")
-                    if (promoIDIndex == -1) Log.e("DB_ERROR", "Column 'PromoID' is missing!")
-                    if (statusIndex == -1) Log.e("DB_ERROR", "Column 'Status' is missing!")
-                    if (orderDateIndex == -1) Log.e("DB_ERROR", "Column 'OrderDate' is missing!")
-                    if (paymentTypeIndex == -1) Log.e("DB_ERROR", "Column 'PaymentType' is missing!")
+                    Log.e("DB_ERROR", "One or more required columns are missing!")
                     continue
                 }
 
-                // Extract values
                 val orderID = result.getInt(orderIDIndex)
                 val customerID = result.getInt(customerIDIndex)
-                val totalPrice = result.getInt(totalPriceIndex)
+                val totalPrice = result.getFloat(totalPriceIndex)
                 val promoID = result.getInt(promoIDIndex)
                 val status = result.getString(statusIndex)
                 val paymentType = result.getString(paymentTypeIndex)
 
-                // Parse OrderDate
                 val orderDateString = result.getString(orderDateIndex)
                 val orderDate = try {
                     LocalDate.parse(orderDateString)
@@ -124,9 +129,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                     LocalDate.now()
                 }
 
-                val order = Order(customerID, totalPrice, promoID, status, orderDate, paymentType)
-                order.orderID = orderID
-
+                val order = Order(orderID, customerID, totalPrice, promoID, status, orderDate, paymentType)
                 list.add(order)
             } while (result.moveToNext())
         } else {
@@ -144,6 +147,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         val cv = ContentValues()
 
         // Setting updated values
+        cv.put("productID", order.productID)
         cv.put("customerID", order.customerID)
         cv.put("TotalPrice", order.totalPrice)
         cv.put("PromoID", order.promoID)
