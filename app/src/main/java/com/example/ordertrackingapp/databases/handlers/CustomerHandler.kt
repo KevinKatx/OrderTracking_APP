@@ -15,8 +15,6 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         val createCustomerTableQuery = """
         CREATE TABLE Customers (
             customerID INTEGER PRIMARY KEY AUTOINCREMENT, 
-            CompletedOrder TEXT, 
-            CurrentOrder INTEGER, 
             name TEXT, 
             type TEXT, 
             address TEXT
@@ -28,8 +26,6 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
     override fun onCreate(db: SQLiteDatabase?) {
         val createTable = "CREATE TABLE Customers (" +
                 "customerID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "CompletedOrder TEXT, " +
-                "CurrentOrder INTEGER, " +
                 "name TEXT, " +
                 "type TEXT, " +
                 "address TEXT)"

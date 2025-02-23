@@ -11,13 +11,13 @@ import androidx.annotation.RequiresApi
 import com.example.ordertrackingapp.databases.Tables.Order
 import java.time.LocalDate
 
-class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
+class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,2){
 
-    init {
+   /* init {
         ProductsHandler(context).createTable()
         CustomerHandler(context).createTable()
         PromosHandler(context).createTable()
-    }
+    }*/
 
     override fun onCreate(db: SQLiteDatabase?){
         val createOrdersTable = "CREATE TABLE Orders (" +
@@ -44,8 +44,8 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         db?.execSQL(createOrdersTable)
         db?.execSQL(createOrderDetailsTable)
 
-        val insertDummyOrder = "INSERT INTO Orders (orderID, customerID, TotalPrice, PromoID, Status, PaymentType) " +
-                "VALUES (4201337, 4201337, 100, 4201337, 'Pending', 'Credit Card')"
+        val insertDummyOrder = "INSERT INTO Orders (customerID, TotalPrice, PromoID, Status, PaymentType) " +
+                "VALUES (4201337, 100, 4201337, 'Pending', 'Credit Card')"
         db?.execSQL(insertDummyOrder)
 
         val insertDummyOrderDetails = "INSERT INTO OrderDetails (orderID, productID, quantity) " +
@@ -54,6 +54,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+        db?.execSQL("DROP TABLE IF EXISTS OrderDetails")
         db?.execSQL("DROP TABLE IF EXISTS Orders")
         onCreate(db)
     }
@@ -62,10 +63,9 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
     fun insertData(order : Order): Boolean {
         val db = this.writableDatabase
         val cv = ContentValues().apply {
-            put("productID", order.productID)
             put("customerID", order.customerID)
-            put("TotalPrice", order.totalPrice)
             put("PromoID", order.promoID)
+            put("TotalPrice", order.totalPrice)
             put("Status", order.status)
             put("OrderDate", order.orderDate.toString()) // Ensure it's stored as a string
             put("PaymentType", order.paymentType)
@@ -74,11 +74,14 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         val result = db.insert("Orders", null, cv)
         db.close()
 
+        Log.d("DB_INSERT", "Insert result: $result")
         return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
+            Log.e("DB_ERROR", "Insert failed")
             false
         } else {
             Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_SUCCESS", "Insert successful with ID: $result")
             true
         }
     }
@@ -131,6 +134,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
                 val order = Order(orderID, customerID, totalPrice, promoID, status, orderDate, paymentType)
                 list.add(order)
+
             } while (result.moveToNext())
         } else {
             Log.i("DB_INFO", "No orders found in database.")
@@ -147,7 +151,6 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         val cv = ContentValues()
 
         // Setting updated values
-        cv.put("productID", order.productID)
         cv.put("customerID", order.customerID)
         cv.put("TotalPrice", order.totalPrice)
         cv.put("PromoID", order.promoID)

@@ -6,7 +6,6 @@ import java.time.LocalDate
 
 class Order {
     var orderID: Int = 0 // Primary Key (PK)
-    var productID: Int = 0
     var customerID: Int = 0 // Foreign Key (FK1) to Customer
     var totalPrice: Float = 0.0f // FK2 to Product
     var promoID: Int = 0 // FK3 to Discount
@@ -18,10 +17,10 @@ class Order {
 
     @RequiresApi(Build.VERSION_CODES.O)
     constructor(
-        productID: Int, customerID: Int, totalPrice: Float, promoID: Int,
+        orderID: Int, customerID: Int, totalPrice: Float, promoID: Int,
         status: String, orderDate: LocalDate, paymentType: String
     ) {
-        this.productID = productID
+        this.orderID = orderID
         this.customerID = customerID
         this.totalPrice = totalPrice
         this.promoID = promoID
@@ -34,7 +33,7 @@ class Order {
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun toString(): String {
-        return "Order(orderID=$orderID, productID=$productID, customerID=$customerID, " +
+        return "Order(orderID=$orderID,  customerID=$customerID, " +
                 "totalPrice=$totalPrice, promoID=$promoID, status=$status, " +
                 "orderDate=$orderDate, paymentType=$paymentType)"
     }

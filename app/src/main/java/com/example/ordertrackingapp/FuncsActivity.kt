@@ -1,6 +1,7 @@
 package com.example.ordertrackingapp
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
@@ -35,6 +36,11 @@ fun OrderScreen(navController: NavController) {
     val orders = remember { mutableStateOf(orderHandler.readData()) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
 
+    // Log orders when the screen is first composed
+    LaunchedEffect(Unit) {
+        Log.d("DB_DEBUG", "Orders retrieved: ${orders.value}")
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,25 +48,40 @@ fun OrderScreen(navController: NavController) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(orders.value) { order ->
-                val isSelected = selectedOrder?.orderID == order.orderID
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                        .clickable { selectedOrder = order },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (isSelected) Color.Gray else Color.White)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Order ID: ${order.orderID}")
-                        Text("Customer ID: ${order.customerID}")
-                        Text("Total Price: ${order.totalPrice}")
-                        Text("Promo ID: ${order.promoID}")
-                        Text("Status: ${order.status}")
-                        Text("Order Date: ${order.orderDate}")
-                        Text("Payment Type: ${order.paymentType}")
+        Box(
+            modifier = Modifier
+                .weight(1f)  // ✅ Allows LazyColumn to scroll
+                .fillMaxWidth()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+            ) {
+                items(orders.value, key = { it.orderID }) { order ->
+                    val isSelected = selectedOrder?.orderID == order.orderID
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                Log.d("DB_QUERY", "Retrieved Order ID: ${order.orderID}")
+                                selectedOrder = order
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color.Gray else Color.White
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Order ID: ${order.orderID}")
+                            Text("Customer ID: ${order.customerID}")
+                            Text("Total Price: ${order.totalPrice}")
+                            Text("Promo ID: ${order.promoID}")
+                            Text("Status: ${order.status}")
+                            Text("Order Date: ${order.orderDate}")
+                            Text("Payment Type: ${order.paymentType}")
+                        }
                     }
                 }
             }
@@ -85,6 +106,7 @@ fun OrderScreen(navController: NavController) {
     }
 }
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun OrderEdit(navController: NavController, orderID: Int? = null) {
@@ -92,7 +114,6 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val orderHandler = OrderHandler(context)
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
-    var productID by remember { mutableStateOf(order.value?.productID?.toString() ?: "")}
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
     var totalPrice by remember { mutableStateOf(order.value?.totalPrice?.toString() ?: "") }
     var promoID by remember { mutableStateOf(order.value?.promoID?.toString() ?: "") }
@@ -107,7 +128,6 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TextField(value = productID, onValueChange = { productID = it }, label = {Text("Product ID")})
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
@@ -118,7 +138,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 val updatedOrder = Order(
-                    productID.toIntOrNull() ?: 0,
+                    order.value?.orderID ?: 0,
                     customerID.toIntOrNull() ?: 0,
                     totalPrice.toFloatOrNull() ?: 0f,
                     promoID.toIntOrNull() ?: 0,
@@ -166,7 +186,6 @@ fun OrderInsert(navController: NavController) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TextField(value = productID, onValueChange =  {productID = it}, label = {Text("Product ID")})
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
