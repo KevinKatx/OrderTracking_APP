@@ -9,8 +9,8 @@ import android.widget.Toast
 import com.example.ordertrackingapp.databases.Tables.Customer
 
 
-class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1) {
-    fun createTable() {
+class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,2) {
+    /*fun createTable() {
         val db = writableDatabase
         val createCustomerTableQuery = """
         CREATE TABLE Customers (
@@ -22,7 +22,7 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
     """.trimIndent()
 
         db.execSQL(createCustomerTableQuery)
-    }
+    }*/
     override fun onCreate(db: SQLiteDatabase?) {
         val createTable = "CREATE TABLE Customers (" +
                 "customerID INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -33,7 +33,7 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         db?.execSQL(createTable)
 
         val insertDummyCustomer = "INSERT INTO Customers (customerID, name, type, address) " +
-                "VALUES (4201337, 'John Doe', 'Regular', '123 Main St')"
+                "VALUES (32, 'John Doe', 'Regular', '123 Main St')"
 
         db?.execSQL(insertDummyCustomer)
     }
@@ -43,13 +43,10 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         onCreate(db)
     }
 
-   
+
     fun insertData(customer: Customer): Boolean{
         val db = this.writableDatabase
-
         val cv = ContentValues().apply(){
-            put("CompletedOrder", customer.CompletedOrder)
-            put("CurrentOrder", customer.CurrentOrder)
             put("name", customer.Name)
             put("type", customer.Type)
             put("address", customer.Address)
@@ -75,7 +72,7 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         val query = if (customerID != null) {
             "SELECT * FROM Customers WHERE customerID = ?"
         } else {
-            "SELECT * FROM Orders"
+            "SELECT * FROM Customers"
         }
         val result = if (customerID != null) {
             db.rawQuery(query, arrayOf(customerID.toString()))
@@ -87,48 +84,36 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
             do {
                 // Ensure columns match exactly
                 val customerIDIndex = result.getColumnIndex("customerID")
-                val completedOrderIndex = result.getColumnIndex("CompletedOrder")
-                val currentOrderIndex = result.getColumnIndex("CurrentOrder")
                 val nameIndex = result.getColumnIndex("name")
                 val typeIndex = result.getColumnIndex("type")
                 val addressIndex = result.getColumnIndex("address")
 
 
-                Log.d("DB_DEBUG", "completedOrder index: $completedOrderIndex")
-                Log.d("DB_DEBUG", "currentOrder index: $currentOrderIndex")
+
                 Log.d("DB_DEBUG", "name index: $nameIndex")
                 Log.d("DB_DEBUG", "type index: $typeIndex")
                 Log.d("DB_DEBUG", "address index: $addressIndex")
 
 
-                if (customerIDIndex == -1 || completedOrderIndex == -1 || currentOrderIndex == -1 || nameIndex == -1 || typeIndex == -1||
+                if (customerIDIndex == -1 ||  nameIndex == -1 || typeIndex == -1||
                     addressIndex == -1) {
 
-                    if (completedOrderIndex == -1) Log.e("DB_ERROR", "Column 'CompletedOrder' is missing!")
-                    if (currentOrderIndex == -1) Log.e("DB_ERROR", "Column 'CurrentOrder' is missing!")
                     if (nameIndex == -1) Log.e("DB_ERROR", "Column 'name' is missing!")
                     if (typeIndex == -1) Log.e("DB_ERROR", "Column 'type' is missing!")
                     if (addressIndex == -1) Log.e("DB_ERROR", "Column 'address' is missing!")
                     continue
                 }
 
-                // Extract values
-//                val customerID = result.getInt(customerIDIndex)
-//                val totalPrice = result.getInt(totalPriceIndex)
-//                val promoID = result.getInt(promoIDIndex)
-//                val status = result.getString(statusIndex)
-//                val paymentType = result.getString(paymentTypeIndex)
+
 
                 val customerID = result.getInt(customerIDIndex)
-                val completedOrder = result.getInt(completedOrderIndex)
-                val currentOrder = result.getInt(currentOrderIndex)
-                val name = result.getInt(nameIndex)
-                val type = result.getInt(typeIndex)
-                val address = result.getInt(addressIndex)
+                val name = result.getString(nameIndex)
+                val type = result.getString(typeIndex)
+                val address = result.getString(addressIndex)
 
 
 
-                val customer = Customer()
+                val customer = Customer(customerID, name, type, address)
 
 
                 list.add(customer)
@@ -148,8 +133,6 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         val cv = ContentValues()
 
         // Setting updated values
-        cv.put("CompletedOrder", customer.CompletedOrder)
-        cv.put("CurrentOrder", customer.CurrentOrder)
         cv.put("name", customer.Name)
         cv.put("type", customer.Type)
         cv.put("address", customer.Address)
@@ -160,5 +143,19 @@ class CustomerHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStop
         val result = db.update("Customers", cv, "customerID = ?", arrayOf(customer.Customer_ID.toString()))
         db.close()
         return result // Returns number of rows affected
+    }
+
+    fun deleteData(customerID: Int): Boolean {
+        val db = this.writableDatabase
+        val result = db.delete("Customers", "customerID = ?", arrayOf(customerID.toString()))
+        db.close()
+
+        return if (result > 0) {
+            Toast.makeText(context, "Delete Successful", Toast.LENGTH_SHORT).show()
+            true
+        } else {
+            Toast.makeText(context, "Delete Failed", Toast.LENGTH_SHORT).show()
+            false
+        }
     }
 }

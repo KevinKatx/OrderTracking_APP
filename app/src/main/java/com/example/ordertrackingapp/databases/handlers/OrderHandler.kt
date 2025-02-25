@@ -25,7 +25,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 "customerID INTEGER, " +
                 "TotalPrice FLOAT, " +
                 "PromoID INTEGER, " +
-                "Status TEXT, " +
+                "Status TEXT CHECK(Status IN ('Pending', 'Completed', 'Cancelled')), " +
                 "OrderDate TEXT DEFAULT (date('now')), " +
                 "PaymentType TEXT, " +
                 "FOREIGN KEY(customerID) REFERENCES Customers(customerID), " +
@@ -41,8 +41,16 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                 "FOREIGN KEY(productID) REFERENCES Products(prod_ID) ON DELETE CASCADE" +
                 ")"
 
+        val createPromotionTable = "CREATE TABLE Promotion (" +
+                "promoID INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "type TEXT," +
+                "discountPercent DECIMAL," +
+                "discountFlat DECIMAL)"
+
+
         db?.execSQL(createOrdersTable)
         db?.execSQL(createOrderDetailsTable)
+        db?.execSQL(createPromotionTable)
 
         val insertDummyOrder = "INSERT INTO Orders (customerID, TotalPrice, PromoID, Status, PaymentType) " +
                 "VALUES (4201337, 100, 4201337, 'Pending', 'Credit Card')"

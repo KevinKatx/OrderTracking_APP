@@ -21,12 +21,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.example.ordertrackingapp.databases.Tables.Order
-import com.example.ordertrackingapp.databases.handlers.OrderHandler
 import java.time.LocalDate
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-
+import com.example.ordertrackingapp.databases.Tables.*
+import com.example.ordertrackingapp.databases.handlers.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -171,7 +170,7 @@ fun OrderInsert(navController: NavController) {
     val context = LocalContext.current
     val orderHandler = OrderHandler(context)
 
-    var productID by remember { mutableStateOf("") }
+    var orderID by remember { mutableStateOf("") }
     var customerID by remember { mutableStateOf("") }
     var totalPrice by remember { mutableStateOf("") }
     var promoID by remember { mutableStateOf("") }
@@ -196,7 +195,7 @@ fun OrderInsert(navController: NavController) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 val newOrder = Order(
-                    productID.toIntOrNull() ?: 0,
+                    orderID.toIntOrNull() ?: 0,
                     customerID.toIntOrNull() ?: 0,
                     totalPrice.toFloatOrNull() ?: 0f,
                     promoID.toIntOrNull() ?: 0,
@@ -223,9 +222,13 @@ fun OrderInsert(navController: NavController) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun seeMenu(navController: NavController) {
-    val menuItems = listOf("Product 1", "Product 2", "Product 3")
-    var selectedProduct by remember { mutableStateOf(menuItems.first()) }
+fun SeeMenu(navController: NavController) {
+    val context = LocalContext.current
+    val productHandler = remember { ProductsHandler(context) }
+    val products = remember { mutableStateOf(productHandler.readData()) }
+    var selectedProduct by remember { mutableStateOf<Products?>(null) }
+
+
 
     Column(
         modifier = Modifier
@@ -234,41 +237,158 @@ fun seeMenu(navController: NavController) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Select a Product:")
-        menuItems.forEach { product ->
-            Row(modifier = Modifier.clickable { selectedProduct = product }) {
-                RadioButton(selected = selectedProduct == product, onClick = { selectedProduct = product })
-                Text(text = product, modifier = Modifier.padding(start = 8.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)  // ✅ Allows LazyColumn to scroll
+                .fillMaxWidth()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+            ) {
+                items(products.value, key = { it.Product_ID }) { product ->
+                    val isSelected = selectedProduct?.Product_ID == product.Product_ID
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                Log.d("DB_QUERY", "Retrieved Product ID: ${product.Product_ID}")
+                                selectedProduct = product
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color.Gray else Color.White
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Product ID: ${product.Product_ID}")
+                            Text("Product Name: ${product.Product_name}")
+                            Text("Price: ${product.Price}")
+
+                        }
+                    }
+                }
             }
         }
 
-        Button(onClick = {
-            navController.previousBackStackEntry?.savedStateHandle?.set("selectedProduct", selectedProduct)
-            navController.popBackStack()
-        }) {
-            Text("OK")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { navController.navigate("product_insert") }) {
+                Text("Insert")
+            }
+
+            Button(
+                onClick = { selectedProduct?.let { navController.navigate("product_edit/${it.Product_ID}") } },
+                enabled = selectedProduct != null
+            ) {
+                Text("Edit")
+            }
+
+            Button(
+                onClick = {
+                    selectedProduct?.let { productHandler.deleteData(it.Product_ID)}
+                    products.value = productHandler.readData()
+                },
+                enabled = selectedProduct != null
+            ) {
+                Text("Delete")
+            }
         }
     }
 }
 
-
-
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ProductsScreen(navController: NavController){
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.TopCenter // Align content in the top center
+fun ProductInsert(navController: NavController){
+    val context = LocalContext.current
+    val productHandler = ProductsHandler(context)
 
+    var productID by remember { mutableStateOf("")}
+    var productName by remember { mutableStateOf("")}
+    var price by remember { mutableStateOf("")}
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp) // Adjust the image position
-        )
+        TextField(value = productName, onValueChange = { productName = it }, label = { Text("Product Name") })
+        TextField(value = price, onValueChange = { price = it }, label = { Text("Price") })
+
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val newProduct = Products(
+                    productID.toIntOrNull() ?: 0,
+                    productName,
+                    price.toIntOrNull() ?: 0,
+
+                )
+                productHandler.insertData(newProduct)
+                navController.popBackStack()
+            }) {
+                Text("Insert")
+            }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Back")
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ProductEdit(navController: NavController, productID: Int? = null) {
+    val context = LocalContext.current
+    val productHandler = ProductsHandler(context)
+    val product = remember { mutableStateOf(productID?.let { productHandler.readData(it).firstOrNull() }) }
+
+
+    var productName by remember { mutableStateOf(product.value?.Product_name?.toString() ?: "") }
+    var price by remember { mutableStateOf(product.value?.Price?.toString() ?: "") }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        TextField(value = productName, onValueChange = { productName = it }, label = { Text("Product Name") })
+        TextField(value = price, onValueChange = { price = it }, label = { Text("Price") })
+
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val updatedProduct = Products(
+                    product.value?.Product_ID ?: 0,
+                    productName.toString() ?: "",
+                    price.toIntOrNull() ?: 0,
+
+                ).apply {if (productID != null) this.Product_ID = productID }
+
+                if (productID != null) {
+                    productHandler.updateData(updatedProduct)
+                } else {
+                    productHandler.insertData(updatedProduct)
+                }
+                navController.popBackStack()
+            }) {
+                Text("OK")
+            }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Back")
+            }
+
+
+        }
     }
 }
 
@@ -293,6 +413,10 @@ fun InventoryScreen(navController: NavHostController) {
 
 @Composable
 fun CustomerScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val customerHandler = remember { CustomerHandler(context) }
+    val customers = remember { mutableStateOf(customerHandler.readData()) }
+    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
     Box(
         modifier = Modifier
             .background(Color.White)
@@ -307,9 +431,171 @@ fun CustomerScreen(navController: NavHostController) {
                 .size(600.dp)
                 .offset(y = -215.dp) // Adjust the image position
         )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)  // ✅ Allows LazyColumn to scroll
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                ) {
+                    items(customers.value, key = { it.Customer_ID }) { customer ->
+                        val isSelected = selectedCustomer?.Customer_ID == customer.Customer_ID
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clickable {
+                                    Log.d("DB_QUERY", "Retrieved Product ID: ${customer.Customer_ID}")
+                                    selectedCustomer = customer
+                                },
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Color.Gray else Color.White
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Customer ID: ${customer.Customer_ID}")
+                                Text("Name: ${customer.Name}")
+                                Text("Type: ${customer.Type}")
+                                Text("Address: ${customer.Address}")
+
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { navController.navigate("customer_insert") }) {
+                    Text("Insert")
+                }
+
+                Button(
+                    onClick = { selectedCustomer?.let { navController.navigate("customer_edit/${it.Customer_ID}") } },
+                    enabled = selectedCustomer != null
+                ) {
+                    Text("Edit")
+                }
+
+                Button(
+                    onClick = {
+                        selectedCustomer?.let { customerHandler.deleteData(it.Customer_ID)}
+                        customers.value = customerHandler.readData()
+                    },
+                    enabled = selectedCustomer != null
+                ) {
+                    Text("Delete")
+                }
+            }
+        }
     }
 }
 
+@Composable
+fun CustomerInsert(navController: NavController) {
+    val context = LocalContext.current
+    val customerHandler = CustomerHandler(context)
+
+    var customerID by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+        TextField(value = type, onValueChange = { type = it }, label = { Text("Type") })
+        TextField(value = address, onValueChange = { address = it }, label = { Text("Address") })
+
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val newCustomer = Customer(
+                    customerID.toIntOrNull() ?: 0,
+                    name,
+                    type,
+                    address
+                )
+                customerHandler.insertData(newCustomer)
+                navController.popBackStack()
+            }) {
+                Text("Insert")
+            }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Back")
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomerEdit(navController: NavController, customerID: Int? = null){
+    val context = LocalContext.current
+    val customerHandler = CustomerHandler(context)
+    val customer = remember { mutableStateOf(customerID?.let { customerHandler.readData(it).firstOrNull() }) }
+
+
+
+    var name by remember {mutableStateOf(customer.value?.Name?.toString() ?: "")}
+    var type by remember {mutableStateOf(customer.value?.Type?.toString() ?: "")}
+    var address by remember {mutableStateOf(customer.value?.Address?.toString() ?: "")}
+
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(value = name, onValueChange = {name = it }, label = { Text("Name") })
+        TextField(value = type, onValueChange = { type = it }, label = { Text("Type") })
+        TextField(value = address, onValueChange = { address = it }, label = { Text("Address") })
+
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val updatedCustomer = Customer(
+                    customer.value?.Customer_ID ?: 0,
+                    name,
+                    type,
+                    address
+                ).apply {if (customerID != null) this.Customer_ID = customerID }
+
+                if (customerID != null) {
+                    customerHandler.updateData(updatedCustomer)
+                } else {
+                    customerHandler.insertData(updatedCustomer)
+                }
+                navController.popBackStack()
+            }) {
+                Text("OK")
+            }
+
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Back")
+            }
+        }
+    }
+}
 @Composable
 fun AnalyticsScreen(navController: NavHostController) {
     Box(

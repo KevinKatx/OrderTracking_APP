@@ -139,16 +139,17 @@ class CustomButton(
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = "advanced") {
         composable("home") {
             HomeScreen(navController = navController)
+        }
+        composable("advanced") {
+            AdvancedScreen(navController = navController)
         }
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
-        composable("order") {
-            OrderScreen(navController = navController)
-        }
+
 
         composable("analytics") {
             AnalyticsScreen(navController = navController)
@@ -156,17 +157,33 @@ fun AppNavigation() {
         composable("customer") {
             CustomerScreen(navController = navController)
         }
+        composable("customer_insert") {
+            CustomerInsert(navController = navController)
+        }
+        composable("customer_edit/{id}") { backStackEntry ->
+            val customerId = backStackEntry.arguments?.getString("id")
+            if (customerId != null) {
+                CustomerEdit(navController = navController, customerId.toInt())
+            }
+        }
         composable("products"){
-            ProductsScreen(navController = navController)
+            SeeMenu(navController = navController)
+        }
+        composable("product_insert"){
+            ProductInsert(navController = navController)
+        }
+        composable("product_edit/{id}") { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("id")
+            if (productId != null) {
+                ProductEdit(navController = navController, productId.toInt())
+            }
+        }
+        composable("order") {
+            OrderScreen(navController = navController)
         }
         composable("order_insert"){
             OrderInsert(navController=navController)
         }
-
-        composable("see_menu"){
-            seeMenu(navController=navController)
-        }
-
         composable("order_edit/{id}") { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("id")
             if (orderId != null) {
@@ -174,14 +191,6 @@ fun AppNavigation() {
             }
         }
 
-
-
-        composable("customer_edit/{id}") { backStackEntry ->
-            val customerId = backStackEntry.arguments?.getString("id")
-            if (customerId != null) {
-                OrderEdit(navController = navController, customerId.toInt())
-            }
-        }
 
     }
 }
@@ -318,6 +327,35 @@ fun HomeScreen(navController: NavController){
             modifier = Modifier
                 .offset(y= 110.dp)
         ){
+            AddOrderBTN(onClick = {
+
+            })
+        }
+    }
+}
+
+
+@Composable
+fun AdvancedScreen(navController: NavController){
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center // Align content in the top center
+
+    ){
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+                .align(Alignment.TopCenter)
+        )
+        Column(
+            modifier = Modifier
+                .offset(y= 110.dp)
+        ){
 
             OrderBTN(onClick = {
                 navController.navigate("order")
@@ -351,6 +389,16 @@ fun HomeScreen(navController: NavController){
         }
 
     }
+}
+
+@Composable
+fun AddOrderBTN(onClick: () -> Unit){
+    val myButton = CustomButton(
+        label = "Add Order",
+        onClick = onClick,
+        iconId = R.drawable.order,
+    )
+    myButton.CreateButton()
 }
 
 
