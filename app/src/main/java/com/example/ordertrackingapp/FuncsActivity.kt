@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.ordertrackingapp
 
 import android.os.Build
@@ -106,6 +108,7 @@ fun OrderScreen(navController: NavController) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun OrderEdit(navController: NavController, orderID: Int? = null) {
@@ -119,7 +122,10 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     var status by remember { mutableStateOf(order.value?.status ?: "") }
     var orderDate by remember { mutableStateOf(order.value?.orderDate?.toString() ?: LocalDate.now().toString()) }
     var paymentType by remember { mutableStateOf(order.value?.paymentType ?: "") }
-
+    var expandedStat by remember { mutableStateOf(false)}
+    val statuses = listOf("Pending", "Completed", "Cancelled")
+    val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
+    var expandedPay by remember { mutableStateOf(false)}
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -130,9 +136,48 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
-        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
+        ExposedDropdownMenuBox(expanded = expandedStat,onExpandedChange = { expandedStat = it }
+        ) {TextField(
+                value = status,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Status") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },
+                modifier = Modifier.menuAnchor()
+            )
+            ExposedDropdownMenu(expanded = expandedStat,onDismissRequest = { expandedStat = false }
+            ) {
+                statuses.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            status = option
+                            expandedStat = false
+                        }
+                    )
+                }
+            }
+        }
         TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
-        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
+        ExposedDropdownMenuBox(expanded = expandedPay, onExpandedChange = {expandedPay = it}) {
+            TextField(value = paymentType, onValueChange = {}, readOnly = true, label = {Text("Payment Method")},
+                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedPay)},
+                modifier = Modifier.menuAnchor())
+            ExposedDropdownMenu(
+                expanded = expandedPay,
+                onDismissRequest = {expandedPay = false}
+            ) {
+                paymentMethods.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            paymentType = option
+                            expandedPay = false
+                        }
+                    )
+                }
+            }
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
@@ -177,6 +222,12 @@ fun OrderInsert(navController: NavController) {
     var status by remember { mutableStateOf("") }
     var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var paymentType by remember { mutableStateOf("") }
+    var expandedStat by remember { mutableStateOf(false)}
+    val statuses = listOf("Pending", "Completed", "Cancelled")
+    val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
+    var expandedPay by remember { mutableStateOf(false)}
+
+    //var prodSelected by remember { mutableStateOf<List<Products>>(emptyList())} di implemented
 
     Column(
         modifier = Modifier
@@ -186,11 +237,54 @@ fun OrderInsert(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
+//        OutlinedButton(onClick = { navController.navigate("see_menu") },
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(18.dp),
+//            shape = MaterialTheme.shapes.small
+//        ) {Text(if (prodSelected.isEmpty()) "Select Products" else "${prodSelected.size} Products Selected")}
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
-        TextField(value = status, onValueChange = { status = it }, label = { Text("Status") })
+        ExposedDropdownMenuBox(expanded = expandedStat,onExpandedChange = { expandedStat = it }
+        ) {TextField(value = status,onValueChange = {},readOnly = true,label = { Text("Status") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },
+                modifier = Modifier.menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = expandedStat,
+                onDismissRequest = { expandedStat = false }
+            ) {
+                statuses.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            status = option
+                            expandedStat = false
+                        }
+                    )
+                }
+            }
+        }
         TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
-        TextField(value = paymentType, onValueChange = { paymentType = it }, label = { Text("Payment Type") })
+        ExposedDropdownMenuBox(expanded = expandedPay, onExpandedChange = {expandedPay = it}) {
+            TextField(value = paymentType, onValueChange = {}, readOnly = true, label = {Text("Payment Method")},
+                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedPay)},
+                modifier = Modifier.menuAnchor())
+            ExposedDropdownMenu(
+                expanded = expandedPay,
+                onDismissRequest = {expandedPay = false}
+            ) {
+                paymentMethods.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            paymentType = option
+                            expandedPay = false
+                        }
+                    )
+                }
+            }
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
@@ -215,10 +309,6 @@ fun OrderInsert(navController: NavController) {
         }
     }
 }
-
-
-
-
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -297,6 +387,7 @@ fun SeeMenu(navController: NavController) {
         }
     }
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -455,7 +546,10 @@ fun CustomerScreen(navController: NavHostController) {
                                 .fillMaxWidth()
                                 .padding(8.dp)
                                 .clickable {
-                                    Log.d("DB_QUERY", "Retrieved Product ID: ${customer.Customer_ID}")
+                                    Log.d(
+                                        "DB_QUERY",
+                                        "Retrieved Product ID: ${customer.Customer_ID}"
+                                    )
                                     selectedCustomer = customer
                                 },
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -510,7 +604,8 @@ fun CustomerInsert(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
-
+    val customerTypes = listOf("New", "Regular", "Returning")
+    var expandedCusTyp by remember { mutableStateOf(false)}
 
     Column(
         modifier = Modifier
@@ -520,7 +615,25 @@ fun CustomerInsert(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
-        TextField(value = type, onValueChange = { type = it }, label = { Text("Type") })
+        ExposedDropdownMenuBox(expanded = expandedCusTyp, onExpandedChange = {expandedCusTyp = it}) {
+            TextField(value = type, onValueChange = {}, readOnly = true, label = {Text("Customer Type")},
+                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedCusTyp)},
+                modifier = Modifier.menuAnchor())
+            ExposedDropdownMenu(
+                expanded = expandedCusTyp,
+                onDismissRequest = {expandedCusTyp = false}
+            ) {
+                customerTypes.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            type = option
+                            expandedCusTyp = false
+                        }
+                    )
+                }
+            }
+        }
         TextField(value = address, onValueChange = { address = it }, label = { Text("Address") })
 
 
@@ -550,8 +663,8 @@ fun CustomerEdit(navController: NavController, customerID: Int? = null){
     val context = LocalContext.current
     val customerHandler = CustomerHandler(context)
     val customer = remember { mutableStateOf(customerID?.let { customerHandler.readData(it).firstOrNull() }) }
-
-
+    val customerTypes = listOf("New", "Regular", "Returning")
+    var expandedCusTyp by remember { mutableStateOf(false)}
 
     var name by remember {mutableStateOf(customer.value?.Name?.toString() ?: "")}
     var type by remember {mutableStateOf(customer.value?.Type?.toString() ?: "")}
@@ -567,7 +680,25 @@ fun CustomerEdit(navController: NavController, customerID: Int? = null){
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(value = name, onValueChange = {name = it }, label = { Text("Name") })
-        TextField(value = type, onValueChange = { type = it }, label = { Text("Type") })
+        ExposedDropdownMenuBox(expanded = expandedCusTyp, onExpandedChange = {expandedCusTyp = it}) {
+            TextField(value = type, onValueChange = {}, readOnly = true, label = {Text("Customer Type")},
+                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedCusTyp)},
+                modifier = Modifier.menuAnchor())
+            ExposedDropdownMenu(
+                expanded = expandedCusTyp,
+                onDismissRequest = {expandedCusTyp = false}
+            ) {
+                customerTypes.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            type = option
+                            expandedCusTyp = false
+                        }
+                    )
+                }
+            }
+        }
         TextField(value = address, onValueChange = { address = it }, label = { Text("Address") })
 
 

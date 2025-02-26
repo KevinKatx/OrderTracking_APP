@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB", null, 2) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB", null, 3) {
 
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL(
@@ -15,7 +15,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
                     "PromoID INTEGER, " +
                     "Status TEXT CHECK(Status IN ('Pending', 'Completed', 'Cancelled')), " +
                     "OrderDate TEXT DEFAULT (date('now')), " +
-                    "PaymentType TEXT, " +
+                    "PaymentType TEXT CHECK(PaymentType IN ('Cash On Delivery', 'GCash', 'Credit Card')), " +
                     "FOREIGN KEY(customerID) REFERENCES Customers(customerID), " +
                     "FOREIGN KEY(PromoID) REFERENCES Promos(promo_ID)" +
                     ")"
@@ -76,6 +76,15 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
         onCreate(db)
     }
 
+    override fun onDowngrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+        db?.execSQL("DROP TABLE IF EXISTS OrderDetails")
+        db?.execSQL("DROP TABLE IF EXISTS Orders")
+        db?.execSQL("DROP TABLE IF EXISTS Promos")
+        db?.execSQL("DROP TABLE IF EXISTS Customers")
+        db?.execSQL("DROP TABLE IF EXISTS Products")
+        db?.execSQL("DROP TABLE IF EXISTS Delivery")
+        onCreate(db)
+    }
     companion object {
         @Volatile
         private var instance: DatabaseHelper? = null

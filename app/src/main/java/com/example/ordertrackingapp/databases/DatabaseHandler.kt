@@ -22,6 +22,11 @@ class DatabaseHandler(
         TODO("Not yet implemented")
     }
 
+    override fun onDowngrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+        val query = "DROP TABLE IF EXISTS $tableName;"
+        db?.execSQL(query)
+    }
+
     private fun createTableQuery(): String {
         return "CREATE TABLE $tableName (" + tableName +
                 "_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
