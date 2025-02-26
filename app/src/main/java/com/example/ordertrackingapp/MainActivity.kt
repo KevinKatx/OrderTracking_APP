@@ -191,6 +191,9 @@ fun AppNavigation() {
             }
         }
 
+        composable("select_products") {
+            SelectProducts(navController)
+        }
 
     }
 }

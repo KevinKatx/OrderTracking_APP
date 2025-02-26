@@ -227,7 +227,21 @@ fun OrderInsert(navController: NavController) {
     val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
     var expandedPay by remember { mutableStateOf(false)}
 
-    //var prodSelected by remember { mutableStateOf<List<Products>>(emptyList())} di implemented
+    var selectedProducts  by remember { mutableStateOf<List<Products>>(emptyList())}
+
+    LaunchedEffect(true) {
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<List<Products>>("selected_products")
+            ?.let { products ->
+                selectedProducts = products
+                // Optionally calculate total price here based on selected products
+                if (products.isNotEmpty()) {
+                    val calculatedTotal = products.sumOf { it.Price.toDouble() }
+                    totalPrice = calculatedTotal.toString()
+                }
+            }
+    }
 
     Column(
         modifier = Modifier
@@ -237,12 +251,14 @@ fun OrderInsert(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
-//        OutlinedButton(onClick = { navController.navigate("see_menu") },
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(18.dp),
-//            shape = MaterialTheme.shapes.small
-//        ) {Text(if (prodSelected.isEmpty()) "Select Products" else "${prodSelected.size} Products Selected")}
+        Button(
+            onClick = { navController.navigate("select_products") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
+        }
         TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
         ExposedDropdownMenuBox(expanded = expandedStat,onExpandedChange = { expandedStat = it }
@@ -743,5 +759,111 @@ fun AnalyticsScreen(navController: NavHostController) {
                 .size(600.dp)
                 .offset(y = -215.dp) // Adjust the image position
         )
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun SelectProducts(navController: NavController) {
+    val context = LocalContext.current
+    val productHandler = remember { ProductsHandler(context) }
+    val products = remember { mutableStateOf(productHandler.readData()) }
+    var selectedProducts by remember { mutableStateOf<MutableList<Products>>(mutableListOf()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Select Products",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp)
+            ) {
+                items(products.value, key = { it.Product_ID }) { product ->
+                    val isSelected = selectedProducts.any { it.Product_ID == product.Product_ID }
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                if (isSelected) {
+                                    selectedProducts.removeIf { it.Product_ID == product.Product_ID }
+                                } else {
+                                    selectedProducts.add(product)
+                                }
+                                // Force recomposition to update UI
+                                selectedProducts = selectedProducts.toMutableList()
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color.LightGray else Color.White
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Product ID: ${product.Product_ID}")
+                                Text("Product Name: ${product.Product_name}")
+                                Text("Price: ${product.Price}")
+                            }
+
+                            if (isSelected) {
+                                Icon(
+                                    painterResource(id = android.R.drawable.checkbox_on_background),
+                                    contentDescription = "Selected",
+                                    tint = Color.Blue
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Cancel")
+            }
+            Text(
+                text = "${selectedProducts.size} Products Selected",
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .padding(horizontal = 8.dp)
+            )
+            Button(
+                onClick = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selected_products", selectedProducts)
+                    navController.popBackStack()
+                }
+            ) {
+                Text("Ok")
+            }
+        }
     }
 }
