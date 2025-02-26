@@ -1,61 +1,29 @@
 package com.example.ordertrackingapp.databases.handlers
 
-
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
-import com.example.ordertrackingapp.databases.Tables.Order
+import com.example.ordertrackingapp.databases.DatabaseHelper
+
 import com.example.ordertrackingapp.databases.Tables.Products
-import java.time.LocalDate
 
-class ProductsHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,2){
-    /*fun createTable() {
-        val db = writableDatabase
-        val createProductTableQuery = """
-        CREATE TABLE IF NOT EXISTS Products (
-            productID INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            price REAL NOT NULL,
-            stock INTEGER NOT NULL
-        )
-    """.trimIndent()
-        db.execSQL(createProductTableQuery)
-    }*/
+class ProductsHandler(private val context: Context) {
 
-    override fun onCreate(db: SQLiteDatabase?){
-        val createTable = "CREATE TABLE Products (" +
-                "productID INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "productName TEXT NOT NULL," +
-                "price INT NOT NULL)"
+    private val dbHelper = DatabaseHelper(context)
 
-        db?.execSQL(createTable)
-
-        val insertDummyProduct = "INSERT INTO Products (productID, productName, price) " +
-                "VALUES (1, 'Sample Dish', 200)"
-        db?.execSQL(insertDummyProduct)
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        db?.execSQL("DROP TABLE IF EXISTS Products")
-        onCreate(db)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun insertData(products: Products): Boolean{
-        val db = this.writableDatabase
-        val cv = ContentValues().apply {
-            put("productName", products.Product_name)
-            put("price", products.Price)
+    fun insertData(product: Products): Boolean {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("productName", product.Product_name)
+            put("price", product.Price)
         }
-        val result = db.insert("Products", null,cv)
+
+        val result = db.insert("Products", null, values)
         db.close()
 
-        return if (result == -1L){
+        return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
             false
         } else {
@@ -64,69 +32,45 @@ class ProductsHandler (var context: Context) : SQLiteOpenHelper(context,"FoodSto
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun readData(productID: Int? = null): MutableList<Products> {
-        val list: MutableList<Products> = ArrayList()
-        val db = this.readableDatabase
-        val query = if (productID != null) {
-            "SELECT * FROM Products WHERE productID = ?"
-        } else {
-            "SELECT * FROM Products"
-        }
-        val result = if (productID != null) {
-            db.rawQuery(query, arrayOf(productID.toString()))
-        } else {
-            db.rawQuery(query, null)
-        }
+    fun readData(productID: Int? = null): List<Products> {
+        val db = dbHelper.readableDatabase
+        val list = mutableListOf<Products>()
+        val query = if (productID != null) "SELECT * FROM Products WHERE productID = ?" else "SELECT * FROM Products"
 
-        if (result.moveToFirst()) {
-            do {
-                // Prevent column index errors
-                val productIDIndex = result.getColumnIndex("productID")
-                val productNameIndex = result.getColumnIndex("productName")
-                val priceIndex = result.getColumnIndex("price")
+        db.rawQuery(query, productID?.let { arrayOf(it.toString()) }).use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow("productID")
+            val nameIndex = cursor.getColumnIndexOrThrow("productName")
+            val priceIndex = cursor.getColumnIndexOrThrow("price")
 
-                // Only set values if the column exists
-                if (productIDIndex == -1 || productNameIndex == -1 || priceIndex == -1) {
-                    Log.e("DB_ERROR", "One or more required columns are missing!")
-                    continue
-                }
-                val prodID = result.getInt(productIDIndex)
-                val prodName = result.getString(productNameIndex)
-                val price = result.getInt(priceIndex)
-
-
-
-
-                val product = Products(prodID, prodName, price)
-                list.add(product)
-
-            } while (result.moveToNext())
-        } else {
-            Log.i("DB_INFO", "No orders found in database.")
+            while (cursor.moveToNext()) {
+                list.add(
+                    Products(
+                        cursor.getInt(idIndex),
+                        cursor.getString(nameIndex),
+                        cursor.getInt(priceIndex)
+                    )
+                )
+            }
         }
 
-        result.close()
         db.close()
         return list
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun updateData(products: Products): Int{
-        val db = this.writableDatabase
-        val cv = ContentValues()
+    fun updateData(product: Products): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("productName", product.Product_name)
+            put("price", product.Price)
+        }
 
-       cv.put("productName", products.Product_name)
-        cv.put("price", products.Price)
-
-        val result = db.update("Products", cv, "productID = ?", arrayOf(products.Product_ID.toString()))
+        val result = db.update("Products", values, "productID = ?", arrayOf(product.Product_ID.toString()))
         db.close()
         return result
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun deleteData(productID: Int): Boolean {
-        val db = this.writableDatabase
+        val db = dbHelper.writableDatabase
         val result = db.delete("Products", "productID = ?", arrayOf(productID.toString()))
         db.close()
 
@@ -138,7 +82,4 @@ class ProductsHandler (var context: Context) : SQLiteOpenHelper(context,"FoodSto
             false
         }
     }
-
-
 }
-
