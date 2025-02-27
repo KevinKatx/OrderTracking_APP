@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import com.example.ordertrackingapp.databases.Tables.*
 import com.example.ordertrackingapp.databases.handlers.*
+import com.google.gson.Gson
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -239,10 +240,12 @@ fun OrderInsert(navController: NavController) {
     var selectedProducts  by remember { mutableStateOf<List<Products>>(emptyList())}
 
     LaunchedEffect(true) {
+        val gson = Gson()
         navController.currentBackStackEntry
             ?.savedStateHandle
-            ?.get<List<Products>>("selected_products")
-            ?.let { products ->
+            ?.get<String>("selected_products")
+            ?.let { json ->
+                val products = gson.fromJson(json, Array<Products>::class.java).toList()
                 selectedProducts = products
                 // Optionally calculate total price here based on selected products
                 if (products.isNotEmpty()) {
@@ -261,7 +264,12 @@ fun OrderInsert(navController: NavController) {
     ) {
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
         Button(
-            onClick = { navController.navigate("select_products") },
+            onClick = {   val gson = Gson()
+                val jsonProducts = gson.toJson(selectedProducts)
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("selected_products", jsonProducts)
+                navController.navigate("select_products") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
@@ -777,7 +785,18 @@ fun SelectProducts(navController: NavController) {
     val context = LocalContext.current
     val productHandler = remember { ProductsHandler(context) }
     val products = remember { mutableStateOf(productHandler.readData()) }
-    var selectedProducts by remember { mutableStateOf<MutableList<Products>>(mutableListOf()) }
+
+    val gson = Gson()
+    val receivedProducts = navController.previousBackStackEntry
+        ?.savedStateHandle
+        ?.get<String>("selected_products")
+        ?.let { json ->
+            gson.fromJson(json, Array<Products>::class.java).toList()
+        } ?: emptyList()
+
+    var selectedProducts by remember { mutableStateOf(receivedProducts) }
+
+
 
     Column(
         modifier = Modifier
@@ -809,13 +828,11 @@ fun SelectProducts(navController: NavController) {
                             .fillMaxWidth()
                             .padding(8.dp)
                             .clickable {
-                                if (isSelected) {
-                                    selectedProducts.removeIf { it.Product_ID == product.Product_ID }
+                                selectedProducts = if (isSelected) {
+                                    selectedProducts.filter { it.Product_ID != product.Product_ID }
                                 } else {
-                                    selectedProducts.add(product)
+                                    selectedProducts + product
                                 }
-                                // Force recomposition to update UI
-                                selectedProducts = selectedProducts.toMutableList()
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                         colors = CardDefaults.cardColors(
@@ -865,10 +882,12 @@ fun SelectProducts(navController: NavController) {
             )
             Button(
                 onClick = {
+                    val gson = Gson()
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.set("selected_products", selectedProducts)
+                        ?.set("selected_products", gson.toJson(selectedProducts))
                     navController.popBackStack()
+
                 }
             ) {
                 Text("Ok")
