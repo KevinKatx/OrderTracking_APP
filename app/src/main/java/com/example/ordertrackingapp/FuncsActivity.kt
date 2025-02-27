@@ -88,20 +88,29 @@ fun OrderScreen(navController: NavController) {
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Button(onClick = { navController.navigate("order_insert") }) {
                 Text("Insert")
             }
 
-            Button(onClick = { orders.value = orderHandler.readData() }) {
-                Text("Read")
-            }
+//            Button(onClick = { orders.value = orderHandler.readData() }) {
+//                Text("Read")
+//            }
 
             Button(
                 onClick = { selectedOrder?.let { navController.navigate("order_edit/${it.orderID}") } },
                 enabled = selectedOrder != null
             ) {
                 Text("Edit")
+            }
+            Button(
+                onClick = {
+                    selectedOrder?.let { orderHandler.deleteData(it.orderID)}
+                    orders.value = orderHandler.readData()
+                },
+                enabled = selectedOrder != null
+            ) {
+                Text("Delete")
             }
         }
     }
@@ -810,7 +819,7 @@ fun SelectProducts(navController: NavController) {
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color.LightGray else Color.White
+                            containerColor = if (isSelected) Color.Gray else Color.White
                         )
                     ) {
                         Row(

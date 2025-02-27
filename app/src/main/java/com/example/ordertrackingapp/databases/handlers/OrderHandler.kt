@@ -105,7 +105,7 @@ class OrderHandler(private val context: Context) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun deleteData(productID: Int): Boolean {
         val db = dbHelper.writableDatabase
-        val result = db.delete("Products", "productID = ?", arrayOf(productID.toString()))
+        val result = db.delete("Orders", "orderID = ?", arrayOf(productID.toString()))
         db.close()
 
         return if (result > 0) {
