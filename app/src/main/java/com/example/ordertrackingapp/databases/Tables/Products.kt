@@ -10,6 +10,7 @@ class Products {
     var Product_name: String = ""
     var Price: Int = 0
 
+    constructor()
     constructor(
         Product_ID: Int, Product_name: String, Price: Int
     ){
@@ -18,7 +19,7 @@ class Products {
         this.Price = Price
     }
 
-    constructor()
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun toString(): String {
         return "Products(productID=$Product_ID,  productName=$Product_name, price=$Price)"

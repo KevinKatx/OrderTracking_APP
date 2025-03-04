@@ -116,4 +116,23 @@ class OrderHandler(private val context: Context) {
             false
         }
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getLatestOrderID(): Int {
+        val db = dbHelper.readableDatabase
+        val query = "SELECT MAX(orderID) FROM `Orders`" // Query without curly braces
+        val cursor = db.rawQuery(query, null) // No need to pass arrayOf(orderID)
+
+        var latestOrderID = 0 // Default value if no records found
+
+        if (cursor.moveToFirst() && !cursor.isNull(0)) { // Check if cursor is not empty and not null
+            latestOrderID = cursor.getInt(0)
+        }
+
+        cursor.close() // Always close the cursor
+        db.close() // Close the database connection
+
+        return latestOrderID
+    }
+
 }

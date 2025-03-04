@@ -25,10 +25,15 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import java.time.LocalDate
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.ordertrackingapp.databases.Tables.*
 import com.example.ordertrackingapp.databases.handlers.*
 import com.google.gson.Gson
+import com.google.gson.internal.LinkedTreeMap
+import com.google.gson.reflect.TypeToken
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -224,34 +229,61 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
 fun OrderInsert(navController: NavController) {
     val context = LocalContext.current
     val orderHandler = OrderHandler(context)
+    val orderDetailHandler = OrderDetailsHandler(context)
 
+    var tempOrderID by remember { mutableStateOf(orderHandler.getLatestOrderID()) }
     var orderID by remember { mutableStateOf("") }
-    var customerID by remember { mutableStateOf("") }
-    var totalPrice by remember { mutableStateOf("") }
-    var promoID by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("") }
-    var orderDate by remember { mutableStateOf(LocalDate.now().toString()) }
-    var paymentType by remember { mutableStateOf("") }
-    var expandedStat by remember { mutableStateOf(false)}
+    var customerID by rememberSaveable { mutableStateOf("") }
+    var totalPrice by remember { mutableStateOf(0) }
+    var promoID by rememberSaveable { mutableStateOf("") }
+    var status by rememberSaveable { mutableStateOf("") }
+    var orderDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+    var paymentType by rememberSaveable { mutableStateOf("") }
+    var expandedStat by rememberSaveable { mutableStateOf(false) }
     val statuses = listOf("Pending", "Completed", "Cancelled")
     val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
-    var expandedPay by remember { mutableStateOf(false)}
+    var expandedPay by rememberSaveable { mutableStateOf(false) }
 
-    var selectedProducts  by remember { mutableStateOf<List<Products>>(emptyList())}
+    var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair
 
-    LaunchedEffect(true) {
+    // Calculate total price automatically when products are received
+    LaunchedEffect(navController.currentBackStackEntry) {
+        Log.d("DEBUG", "LaunchedEffect Triggered")
+
         val gson = Gson()
         navController.currentBackStackEntry
             ?.savedStateHandle
             ?.get<String>("selected_products")
             ?.let { json ->
-                val products = gson.fromJson(json, Array<Products>::class.java).toList()
-                selectedProducts = products
-                // Optionally calculate total price here based on selected products
-                if (products.isNotEmpty()) {
-                    val calculatedTotal = products.sumOf { it.Price.toDouble() }
-                    totalPrice = calculatedTotal.toString()
+                Log.d("DEBUG", "JSON Data: $json")
+
+                val type = object : TypeToken<List<Map<String, Any>>>() {}.type
+                val productList: List<Map<String, Any>> = gson.fromJson(json, type)
+
+                // Clear list every time before adding new products
+                selectedProducts = emptyList()
+
+                selectedProducts = productList.map { map ->
+                    val productMap = map["first"] as? Map<String, Any> ?: emptyMap()
+
+                    val product = Products(
+                        productMap["Product_ID"] as? Int ?: 0,
+                        productMap["Product_name"] as? String ?: "",
+                        (productMap["Price"] as? Double)?.toInt() ?: 0
+                    )
+
+                    val quantity = (map["second"] as? Double)?.toInt() ?: 0
+
+                    Log.d("DEBUG", "Product: ${product.Product_name}, Quantity: $quantity")
+
+                    Pair(product, quantity)
                 }
+
+                // Calculate Total Price
+                totalPrice = selectedProducts.sumOf { (product, quantity) ->
+                    product.Price * quantity
+                }
+                Log.d("DEBUG", "Total Price: $totalPrice")
             }
     }
 
@@ -263,58 +295,56 @@ fun OrderInsert(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextField(value = customerID, onValueChange = { customerID = it }, label = { Text("Customer ID") })
+
         Button(
-            onClick = {   val gson = Gson()
+            onClick = {
+                val gson = Gson()
                 val jsonProducts = gson.toJson(selectedProducts)
                 navController.currentBackStackEntry
                     ?.savedStateHandle
                     ?.set("selected_products", jsonProducts)
-                navController.navigate("select_products") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+                navController.navigate("select_products")
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
         }
-        TextField(value = totalPrice, onValueChange = { totalPrice = it }, label = { Text("Total Price") })
+
+        Text(
+            text = "Total Price: ₱${totalPrice.toString()}", // Display total price
+            style = MaterialTheme.typography.headlineMedium
+        )
+
         TextField(value = promoID, onValueChange = { promoID = it }, label = { Text("Promo ID") })
-        ExposedDropdownMenuBox(expanded = expandedStat,onExpandedChange = { expandedStat = it }
-        ) {TextField(value = status,onValueChange = {},readOnly = true,label = { Text("Status") },
+
+        ExposedDropdownMenuBox(expanded = expandedStat, onExpandedChange = { expandedStat = it }) {
+            TextField(value = status, onValueChange = {}, readOnly = true, label = { Text("Status") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },
                 modifier = Modifier.menuAnchor()
             )
-            ExposedDropdownMenu(
-                expanded = expandedStat,
-                onDismissRequest = { expandedStat = false }
-            ) {
+            ExposedDropdownMenu(expanded = expandedStat, onDismissRequest = { expandedStat = false }) {
                 statuses.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            status = option
-                            expandedStat = false
-                        }
-                    )
+                    DropdownMenuItem(text = { Text(option) }, onClick = {
+                        status = option
+                        expandedStat = false
+                    })
                 }
             }
         }
+
         TextField(value = orderDate, onValueChange = { orderDate = it }, label = { Text("Order Date") })
-        ExposedDropdownMenuBox(expanded = expandedPay, onExpandedChange = {expandedPay = it}) {
-            TextField(value = paymentType, onValueChange = {}, readOnly = true, label = {Text("Payment Method")},
-                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedPay)},
-                modifier = Modifier.menuAnchor())
-            ExposedDropdownMenu(
-                expanded = expandedPay,
-                onDismissRequest = {expandedPay = false}
-            ) {
+
+        ExposedDropdownMenuBox(expanded = expandedPay, onExpandedChange = { expandedPay = it }) {
+            TextField(value = paymentType, onValueChange = {}, readOnly = true, label = { Text("Payment Method") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPay) },
+                modifier = Modifier.menuAnchor()
+            )
+            ExposedDropdownMenu(expanded = expandedPay, onDismissRequest = { expandedPay = false }) {
                 paymentMethods.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            paymentType = option
-                            expandedPay = false
-                        }
-                    )
+                    DropdownMenuItem(text = { Text(option) }, onClick = {
+                        paymentType = option
+                        expandedPay = false
+                    })
                 }
             }
         }
@@ -324,7 +354,7 @@ fun OrderInsert(navController: NavController) {
                 val newOrder = Order(
                     orderID.toIntOrNull() ?: 0,
                     customerID.toIntOrNull() ?: 0,
-                    totalPrice.toFloatOrNull() ?: 0f,
+                    totalPrice.toFloat(), // Automatically set total price
                     promoID.toIntOrNull() ?: 0,
                     status,
                     LocalDate.parse(orderDate),
@@ -336,12 +366,19 @@ fun OrderInsert(navController: NavController) {
                 Text("Insert")
             }
 
-            Button(onClick = { navController.popBackStack() }) {
+            Button(onClick = {
+                if (orderDetailHandler.readData(tempOrderID).isNotEmpty()) {
+                    orderDetailHandler.deleteData(tempOrderID)
+                    navController.popBackStack()
+                }
+                navController.popBackStack()
+            }) {
                 Text("Back")
             }
         }
     }
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -785,8 +822,8 @@ fun SelectProducts(navController: NavController) {
     val context = LocalContext.current
     val productHandler = remember { ProductsHandler(context) }
     val products = remember { mutableStateOf(productHandler.readData()) }
-
     val gson = Gson()
+
     val receivedProducts = navController.previousBackStackEntry
         ?.savedStateHandle
         ?.get<String>("selected_products")
@@ -794,8 +831,19 @@ fun SelectProducts(navController: NavController) {
             gson.fromJson(json, Array<Products>::class.java).toList()
         } ?: emptyList()
 
-    var selectedProducts by remember { mutableStateOf(receivedProducts) }
+    val selectedProducts = remember { mutableStateListOf<Pair<Products, Int>>() }
+    var showDialog by remember { mutableStateOf(false) }
+    var selectedProduct by remember { mutableStateOf<Products?>(null) }
+    var quantity by remember { mutableStateOf("") }
 
+    // Add received products to the list with default quantity
+    LaunchedEffect(true) {
+        // Always clear the list every time the screen is opened
+        selectedProducts.clear()
+        receivedProducts.forEach {
+            selectedProducts.add(it to 1) // Add received products with default quantity
+        }
+    }
 
 
     Column(
@@ -811,54 +859,41 @@ fun SelectProducts(navController: NavController) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+        LazyColumn(
+            modifier = Modifier.weight(1f)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 16.dp)
-            ) {
-                items(products.value, key = { it.Product_ID }) { product ->
-                    val isSelected = selectedProducts.any { it.Product_ID == product.Product_ID }
-                    Card(
+            items(products.value, key = { it.Product_ID }) { product ->
+                val selected = selectedProducts.find { it.first.Product_ID == product.Product_ID }
+                val isSelected = selected != null
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .clickable {
+                            selectedProduct = product
+                            quantity = selected?.second?.toString() ?: ""
+                            showDialog = true
+                        },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) Color.Gray else Color.White
+                    )
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp)
-                            .clickable {
-                                selectedProducts = if (isSelected) {
-                                    selectedProducts.filter { it.Product_ID != product.Product_ID }
-                                } else {
-                                    selectedProducts + product
-                                }
-                            },
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color.Gray else Color.White
-                        )
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Product ID: ${product.Product_ID}")
-                                Text("Product Name: ${product.Product_name}")
-                                Text("Price: ${product.Price}")
-                            }
-
-                            if (isSelected) {
-                                Icon(
-                                    painterResource(id = android.R.drawable.checkbox_on_background),
-                                    contentDescription = "Selected",
-                                    tint = Color.Blue
-                                )
-                            }
+                        Column {
+                            Text("Product ID: ${product.Product_ID}")
+                            Text("Product Name: ${product.Product_name}")
+                            Text("Price: ${product.Price}")
+                        }
+                        if (isSelected) {
+                            Text("Qty: ${selected?.second}", color = Color.Blue)
                         }
                     }
                 }
@@ -874,24 +909,54 @@ fun SelectProducts(navController: NavController) {
             Button(onClick = { navController.popBackStack() }) {
                 Text("Cancel")
             }
-            Text(
-                text = "${selectedProducts.size} Products Selected",
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .padding(horizontal = 8.dp)
-            )
+
+            Text("${selectedProducts.size} Products Selected")
+
             Button(
                 onClick = {
-                    val gson = Gson()
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("selected_products", gson.toJson(selectedProducts))
                     navController.popBackStack()
-
                 }
             ) {
                 Text("Ok")
             }
         }
+    }
+
+    // Quantity Dialog
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Enter Quantity") },
+            text = {
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Quantity") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (quantity.isNotBlank()) {
+                        val qty = quantity.toInt()
+                        if (qty > 0) {
+                            selectedProducts.removeIf { it.first.Product_ID == selectedProduct?.Product_ID }
+                            selectedProducts.add(selectedProduct!! to qty)
+                        }
+                        showDialog = false
+                    }
+                }) {
+                    Text("Ok")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
