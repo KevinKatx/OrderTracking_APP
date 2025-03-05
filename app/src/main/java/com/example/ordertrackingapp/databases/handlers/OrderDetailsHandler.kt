@@ -58,7 +58,7 @@ class OrderDetailsHandler(private val context: Context) {
             do {
                 val orderID = result.getInt(result.getColumnIndexOrThrow("orderID"))
                 val productID = result.getInt(result.getColumnIndexOrThrow("productID"))
-                val quantity = result.getInt(result.getColumnIndexOrThrow("quantityID"))
+                val quantity = result.getInt(result.getColumnIndexOrThrow("quantity"))
 
 
                 val orderDetail = OrderDetails(orderID, productID, quantity)

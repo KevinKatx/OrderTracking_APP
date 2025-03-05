@@ -4,6 +4,7 @@ package com.example.ordertrackingapp
 
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
@@ -25,6 +26,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import java.time.LocalDate
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,8 +42,15 @@ import com.google.gson.reflect.TypeToken
 fun OrderScreen(navController: NavController) {
     val context = LocalContext.current
     val orderHandler = remember { OrderHandler(context) }
+    val orderDetailHandler = remember { OrderDetailsHandler(context) }
     val orders = remember { mutableStateOf(orderHandler.readData()) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
+
+    // Function to get product IDs for an order
+    fun getProductIdsForOrder(orderID: Int): String {
+        val orderDetails = orderDetailHandler.readData(orderID)
+        return orderDetails.map { it.productID }.joinToString(", ")
+    }
 
     // Log orders when the screen is first composed
     LaunchedEffect(Unit) {
@@ -78,6 +87,8 @@ fun OrderScreen(navController: NavController) {
                 ) {
                     items(orders.value, key = { it.orderID }) { order ->
                         val isSelected = selectedOrder?.orderID == order.orderID
+                        val productIds = getProductIdsForOrder(order.orderID)
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -99,20 +110,18 @@ fun OrderScreen(navController: NavController) {
                                 Text("Status: ${order.status}")
                                 Text("Order Date: ${order.orderDate}")
                                 Text("Payment Type: ${order.paymentType}")
+                                Text("Product IDs: $productIds")
                             }
                         }
                     }
                 }
             }
 
+            // Rest of the existing code remains the same
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Button(onClick = { navController.navigate("order_insert") }) {
                     Text("Insert")
                 }
-
-//            Button(onClick = { orders.value = orderHandler.readData() }) {
-//                Text("Read")
-//            }
 
                 Button(
                     onClick = { selectedOrder?.let { navController.navigate("order_edit/${it.orderID}") } },
@@ -122,8 +131,12 @@ fun OrderScreen(navController: NavController) {
                 }
                 Button(
                     onClick = {
-                        selectedOrder?.let { orderHandler.deleteData(it.orderID) }
-                        orders.value = orderHandler.readData()
+                        selectedOrder?.let {
+                            orderHandler.deleteData(it.orderID)
+                            // Also delete associated order details
+                            OrderDetailsHandler(context).deleteData(it.orderID)
+                            orders.value = orderHandler.readData()
+                        }
                     },
                     enabled = selectedOrder != null
                 ) {
@@ -362,7 +375,8 @@ fun OrderInsert(navController: NavController) {
                         ?.set("selected_products", jsonProducts)
                     navController.navigate("select_products")
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.width(280.dp),
+                shape = RoundedCornerShape(0.dp)
             ) {
                 Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
             }
@@ -429,16 +443,37 @@ fun OrderInsert(navController: NavController) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
+                    // First, insert the order
                     val newOrder = Order(
                         orderID.toIntOrNull() ?: 0,
                         customerID.toIntOrNull() ?: 0,
-                        totalPrice.toFloat(), // Automatically set total price
+                        totalPrice.toFloat(),
                         promoID.toIntOrNull() ?: 0,
                         status,
                         LocalDate.parse(orderDate),
                         paymentType
                     )
-                    orderHandler.insertData(newOrder)
+
+                    // Get the actual inserted order ID
+                    val insertedOrderId = if (orderHandler.insertData(newOrder)) {
+                        // If order insertion is successful, get the latest order ID
+                        orderHandler.getLatestOrderID()
+                    } else {
+                        // If order insertion fails, return without inserting order details
+                        Toast.makeText(context, "Failed to insert order", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    // Then, insert order details for each selected product
+                    selectedProducts.forEach { (product, quantity) ->
+                        val orderDetail = OrderDetails(
+                            orderID = insertedOrderId,
+                            productID = product.Product_ID,
+                            quantity = quantity
+                        )
+                        orderDetailHandler.insertData(orderDetail)
+                    }
+
                     navController.popBackStack()
                 }) {
                     Text("Insert")
