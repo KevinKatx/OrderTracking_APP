@@ -154,6 +154,10 @@ fun OrderScreen(navController: NavController) {
 fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val context = LocalContext.current
     val orderHandler = OrderHandler(context)
+    val orderDetailHandler = OrderDetailsHandler(context)
+    val productHandler = remember { ProductsHandler(context) }
+    val gson = Gson()
+
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
@@ -164,8 +168,65 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     var paymentType by remember { mutableStateOf(order.value?.paymentType ?: "") }
     var expandedStat by remember { mutableStateOf(false)}
     val statuses = listOf("Pending", "Completed", "Cancelled")
-    val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
+    val paymentMethods = listOf("Cash On Delivery", "GCash", "Credit Card")
     var expandedPay by remember { mutableStateOf(false)}
+
+    // Manage selected products
+    var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) }
+
+    // Load existing order details when editing
+    LaunchedEffect(orderID) {
+        orderID?.let { id ->
+            // Fetch existing order details
+            val existingOrderDetails = orderDetailHandler.readData(id)
+
+            // Convert order details to selected products
+            selectedProducts = existingOrderDetails.mapNotNull { orderDetail ->
+                val product = productHandler.readData().find { it.Product_ID == orderDetail.productID }
+                product?.let { Pair(it, orderDetail.quantity) }
+            }
+
+            // Recalculate total price based on selected products
+            totalPrice = selectedProducts.sumOf { (product, quantity) ->
+                product.Price * quantity
+            }.toString()
+        }
+    }
+
+    // Handle product selection from navigation
+    LaunchedEffect(navController.currentBackStackEntry) {
+        val receivedProducts = navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<String>("selected_products")
+            ?.let { json ->
+                val type = object : TypeToken<List<Map<String, Any>>>() {}.type
+                val productList: List<Map<String, Any>> = gson.fromJson(json, type)
+
+                productList.map { map ->
+                    val productMap = map["first"] as? Map<String, Any> ?: emptyMap()
+
+                    val product = Products(
+                        productMap["Product_ID"] as? Int ?: 0,
+                        productMap["Product_name"] as? String ?: "",
+                        (productMap["Price"] as? Double)?.toInt() ?: 0
+                    )
+
+                    val quantity = (map["second"] as? Double)?.toInt() ?: 0
+
+                    Pair(product, quantity)
+                }
+            } ?: emptyList()
+
+        if (receivedProducts.isNotEmpty()) {
+            selectedProducts = receivedProducts
+
+            // Recalculate total price
+            totalPrice = selectedProducts.sumOf { (product, quantity) ->
+                product.Price * quantity
+            }.toString()
+        }
+    }
+
     Box(modifier = Modifier
         .background(Color.White)
         .fillMaxSize()){
@@ -187,14 +248,31 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 value = customerID,
                 onValueChange = { customerID = it },
                 label = { Text("Customer ID") })
+
+            Button(
+                onClick = {
+                    val jsonProducts = gson.toJson(selectedProducts)
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selected_products", jsonProducts)
+                    navController.navigate("select_products")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
+            }
+
             TextField(
                 value = totalPrice,
                 onValueChange = { totalPrice = it },
+                readOnly = true,
                 label = { Text("Total Price") })
+
             TextField(
                 value = promoID,
                 onValueChange = { promoID = it },
                 label = { Text("Promo ID") })
+
             ExposedDropdownMenuBox(expanded = expandedStat, onExpandedChange = { expandedStat = it }
             ) {
                 TextField(
@@ -260,13 +338,36 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                         status,
                         LocalDate.parse(orderDate),
                         paymentType
-                    ).apply { if (orderID != null) this.orderID = orderID }
+                    )
 
-                    if (orderID != null) {
+                    // Determine if we're updating or inserting
+                    val insertedOrderId = if (orderID != null) {
+                        // Update existing order
                         orderHandler.updateData(updatedOrder)
+                        orderID
                     } else {
-                        orderHandler.insertData(updatedOrder)
+                        // Insert new order and get its ID
+                        if (orderHandler.insertData(updatedOrder)) {
+                            orderHandler.getLatestOrderID()
+                        } else {
+                            Toast.makeText(context, "Failed to insert order", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                     }
+
+                    // Delete existing order details for this order
+                    orderDetailHandler.deleteData(insertedOrderId)
+
+                    // Insert new order details
+                    selectedProducts.forEach { (product, quantity) ->
+                        val orderDetail = OrderDetails(
+                            orderID = insertedOrderId,
+                            productID = product.Product_ID,
+                            quantity = quantity
+                        )
+                        orderDetailHandler.insertData(orderDetail)
+                    }
+
                     navController.popBackStack()
                 }) {
                     Text("OK")
