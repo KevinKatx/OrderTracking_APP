@@ -139,12 +139,10 @@ class CustomButton(
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "advanced") {
+    NavHost(navController = navController, startDestination = "home") {
+
         composable("home") {
             HomeScreen(navController = navController)
-        }
-        composable("advanced") {
-            AdvancedScreen(navController = navController)
         }
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
@@ -190,6 +188,21 @@ fun AppNavigation() {
                 OrderEdit(navController = navController, orderId.toInt())
             }
         }
+
+        composable("promo") {
+            PromoScreen(navController = navController) // Your Login Screen Composable
+        }
+
+        composable("promo_insert") {
+            PromoInsert(navController = navController) // Your Login Screen Composable
+        }
+
+        /*composable("promo_edit/{id}") {backStackEntry ->
+            val promoId = backStackEntry.arguments?.getString("id")
+            if (promoId != null) {
+                PromoEdit(navController = navController, promoId.toInt())
+            }
+        }*/
 
         composable("select_products") {
             SelectProducts(navController)
@@ -309,37 +322,9 @@ fun SubmitBTN(onClick: () -> Unit) {
 }
 
 
+
 @Composable
 fun HomeScreen(navController: NavController){
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.Center // Align content in the top center
-
-    ){
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp)
-                .align(Alignment.TopCenter)
-        )
-        Column(
-            modifier = Modifier
-                .offset(y= 110.dp)
-        ){
-            AddOrderBTN(onClick = {
-
-            })
-        }
-    }
-}
-
-
-@Composable
-fun AdvancedScreen(navController: NavController){
     Box(
         modifier = Modifier
             .background(Color.White)
@@ -366,7 +351,9 @@ fun AdvancedScreen(navController: NavController){
             ProductsBTN(onClick = {
                 navController.navigate("products")
             })
-
+            PromoBTN(onClick = {
+                navController.navigate("promo")
+            })
             AnalyticsBTN(onClick = {
                 navController.navigate("analytics")
             })
@@ -462,6 +449,18 @@ fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
             navController.navigate("login") // Navigate to login screen
         },
         iconId = R.drawable.logout, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun PromoBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Promo",
+        onClick = onClick,
+        iconId = R.drawable.discount, // Replace with your icon
     )
 
     // Use the CreateButton function to display the button

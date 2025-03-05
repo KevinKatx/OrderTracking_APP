@@ -1,0 +1,697 @@
+Index: app/src/main/java/com/example/ordertrackingapp/databases/handlers/PromosHandler.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.ordertrackingapp.databases.handlers\r\n\r\nimport android.content.Context\r\nimport android.database.sqlite.SQLiteDatabase\r\nimport android.database.sqlite.SQLiteOpenHelper\r\n\r\nclass PromosHandler(var context: Context) : SQLiteOpenHelper(context,\"FoodStopDB\",null,1){\r\n\r\n\r\n    override fun onCreate(db: SQLiteDatabase?) {\r\n        val createTable = \"CREATE TABLE IF NOT EXISTS Promos (\" +\r\n                \"promo_ID INTEGER PRIMARY KEY AUTOINCREMENT, \" +\r\n                \"type TEXT, discount_percent INTEGER, discount_flat INTEGER)\"\r\n        db?.execSQL(createTable)\r\n\r\n        val insertDummyPromo = \"INSERT INTO Promos (promo_ID, type, discount_percent, discount_flat) \" +\r\n                \"VALUES (4201337, 'Percentage', 10, 0)\"\r\n        db?.execSQL(insertDummyPromo)\r\n    }\r\n\r\n    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {\r\n        db?.execSQL(\"DROP TABLE IF EXISTS Promos\")\r\n        onCreate(db)\r\n    }\r\n\r\n\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/ordertrackingapp/databases/handlers/PromosHandler.kt b/app/src/main/java/com/example/ordertrackingapp/databases/handlers/PromosHandler.kt
+--- a/app/src/main/java/com/example/ordertrackingapp/databases/handlers/PromosHandler.kt	(revision 8ecc3caa460cd864caa5ea70ebe83627613c5ffd)
++++ b/app/src/main/java/com/example/ordertrackingapp/databases/handlers/PromosHandler.kt	(date 1741190317163)
+@@ -1,27 +1,77 @@
+ package com.example.ordertrackingapp.databases.handlers
+ 
++import android.content.ContentValues
+ import android.content.Context
+ import android.database.sqlite.SQLiteDatabase
+ import android.database.sqlite.SQLiteOpenHelper
++import android.widget.Toast
++import com.example.ordertrackingapp.databases.DatabaseHelper
++import com.example.ordertrackingapp.databases.Tables.Products
++import com.example.ordertrackingapp.databases.Tables.Promos
++
++class PromosHandler(private val context: Context) {
+ 
+-class PromosHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
++    private val dbHelper = DatabaseHelper(context)
+ 
++    fun readData(promoID: Int? =null): List<Promos>{
++        val db = dbHelper.readableDatabase
++        val list = mutableListOf<Promos>()
++        val query = if (promoID != null) "SELECT * FROM Promos WHERE promo_ID = ?" else "SELECT * FROM Promos"
+ 
+-    override fun onCreate(db: SQLiteDatabase?) {
+-        val createTable = "CREATE TABLE IF NOT EXISTS Promos (" +
+-                "promo_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+-                "type TEXT, discount_percent INTEGER, discount_flat INTEGER)"
+-        db?.execSQL(createTable)
++        db.rawQuery(query, promoID?.let { arrayOf(it.toString()) }).use { cursor ->
++            val idIndex = cursor.getColumnIndexOrThrow("promo_ID")
++            val typeIndex = cursor.getColumnIndexOrThrow("type")
++            val dcpercentIndex = cursor.getColumnIndexOrThrow("discount_percent")
++            val dcflatIndex = cursor.getColumnIndexOrThrow("discount_flat")
++
++            while (cursor.moveToNext()) {
++                list.add(
++                    Promos(
++                        cursor.getInt(idIndex),
++                        cursor.getString(typeIndex),
++                        cursor.getInt(dcpercentIndex),
++                        cursor.getInt(dcflatIndex)
++                    )
++                )
++            }
++        }
+ 
+-        val insertDummyPromo = "INSERT INTO Promos (promo_ID, type, discount_percent, discount_flat) " +
+-                "VALUES (4201337, 'Percentage', 10, 0)"
+-        db?.execSQL(insertDummyPromo)
++        db.close()
++        return list
+     }
+ 
+-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+-        db?.execSQL("DROP TABLE IF EXISTS Promos")
+-        onCreate(db)
+-    }
++    fun insertData(promo: Promos): Boolean {
++        val db = dbHelper.writableDatabase
++        val values = ContentValues().apply {
++            put("type", promo.Type)
++            put("discount_percent", promo.DiscountPercent)
++            put("discount_flat", promo.DiscountFlat)
++        }
+ 
++        val result = db.insert("Promos", null, values)
++        db.close()
++
++        return if (result == -1L) {
++            Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
++            false
++        } else {
++            Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
++            true
++        }
++    }
++
++    fun deleteData(promoID: Int): Boolean {
++        val db = dbHelper.writableDatabase
++        val result = db.delete("Promos", "promoID = ?", arrayOf(promoID.toString()))
++        db.close()
++
++        return if (result > 0) {
++            Toast.makeText(context, "Delete Successful", Toast.LENGTH_SHORT).show()
++            true
++        } else {
++            Toast.makeText(context, "Delete Failed", Toast.LENGTH_SHORT).show()
++            false
++        }
++    }
+ 
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/example/ordertrackingapp/databases/Tables/Promos.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.ordertrackingapp.databases.Tables\r\n\r\nimport kotlin.collections.List\r\nimport kotlin.reflect.full.memberProperties\r\n\r\nclass Promos {\r\n    var Promo_ID: Int = 0\r\n    var Type: String = \"\"\r\n    var DiscountPercent: Int = 0\r\n    var DiscountFlat: Int = 0\r\n\r\n    // Returns columns\r\n    fun getColumns(): List<String> {\r\n        val properties = this::class.memberProperties.map { it.name }\r\n        val idColumns = properties.filter { it.endsWith(\"_ID\") }\r\n        val otherColumns = properties.filterNot { it.endsWith(\"_ID\") }\r\n\r\n        return idColumns + otherColumns // Ensures ID columns come first\r\n    }\r\n\r\n    // Gets table name by removing `_ID`\r\n    fun getTableName(): String {\r\n        return this::class.memberProperties\r\n            .firstOrNull { it.name.endsWith(\"_ID\") }\r\n            ?.name?.removeSuffix(\"_ID\") ?: \"UnknownTable\"\r\n    }\r\n\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/ordertrackingapp/databases/Tables/Promos.kt b/app/src/main/java/com/example/ordertrackingapp/databases/Tables/Promos.kt
+--- a/app/src/main/java/com/example/ordertrackingapp/databases/Tables/Promos.kt	(revision 8ecc3caa460cd864caa5ea70ebe83627613c5ffd)
++++ b/app/src/main/java/com/example/ordertrackingapp/databases/Tables/Promos.kt	(date 1741186794148)
+@@ -9,20 +9,15 @@
+     var DiscountPercent: Int = 0
+     var DiscountFlat: Int = 0
+ 
+-    // Returns columns
+-    fun getColumns(): List<String> {
+-        val properties = this::class.memberProperties.map { it.name }
+-        val idColumns = properties.filter { it.endsWith("_ID") }
+-        val otherColumns = properties.filterNot { it.endsWith("_ID") }
+-
+-        return idColumns + otherColumns // Ensures ID columns come first
++    constructor(
++        Promo_ID: Int, Type: String, DiscountPercent: Int, DiscountFlat: Int
++    ){
++        this.Promo_ID = Promo_ID
++        this.Type = Type
++        this.DiscountPercent = DiscountPercent
++        this.DiscountFlat = DiscountFlat
+     }
+ 
+-    // Gets table name by removing `_ID`
+-    fun getTableName(): String {
+-        return this::class.memberProperties
+-            .firstOrNull { it.name.endsWith("_ID") }
+-            ?.name?.removeSuffix("_ID") ?: "UnknownTable"
+-    }
++    constructor()
+ 
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/example/ordertrackingapp/FuncsActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>@file:OptIn(ExperimentalMaterial3Api::class)\r\n\r\npackage com.example.ordertrackingapp\r\n\r\nimport android.os.Build\r\nimport android.util.Log\r\nimport android.widget.Toast\r\nimport androidx.annotation.RequiresApi\r\nimport androidx.compose.foundation.layout.*\r\nimport androidx.compose.foundation.Image\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.foundation.lazy.LazyColumn\r\nimport androidx.compose.material3.Button\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.material3.TextField\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.platform.LocalContext\r\nimport androidx.compose.ui.res.painterResource\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.navigation.NavController\r\nimport androidx.navigation.NavHostController\r\nimport java.time.LocalDate\r\nimport androidx.compose.foundation.lazy.items\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.foundation.text.KeyboardOptions\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.saveable.rememberSaveable\r\nimport androidx.compose.ui.text.input.KeyboardType\r\nimport com.example.ordertrackingapp.databases.Tables.*\r\nimport com.example.ordertrackingapp.databases.handlers.*\r\nimport com.google.gson.Gson\r\nimport com.google.gson.internal.LinkedTreeMap\r\nimport com.google.gson.reflect.TypeToken\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun OrderScreen(navController: NavController) {\r\n    val context = LocalContext.current\r\n    val orderHandler = remember { OrderHandler(context) }\r\n    val orderDetailHandler = remember { OrderDetailsHandler(context) }\r\n    val orders = remember { mutableStateOf(orderHandler.readData()) }\r\n    var selectedOrder by remember { mutableStateOf<Order?>(null) }\r\n\r\n    // Function to get product IDs for an order\r\n    fun getProductIdsForOrder(orderID: Int): String {\r\n        val orderDetails = orderDetailHandler.readData(orderID)\r\n        return orderDetails.map { it.productID }.joinToString(\", \")\r\n    }\r\n\r\n    // Log orders when the screen is first composed\r\n    LaunchedEffect(Unit) {\r\n        Log.d(\"DB_DEBUG\", \"Orders retrieved: ${orders.value}\")\r\n    }\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            Box(\r\n                modifier = Modifier\r\n                    .weight(1f)  // ✅ Allows LazyColumn to scroll\r\n                    .fillMaxWidth()\r\n            ) {\r\n                LazyColumn(\r\n                    modifier = Modifier\r\n                        .fillMaxSize()\r\n                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom\r\n                ) {\r\n                    items(orders.value, key = { it.orderID }) { order ->\r\n                        val isSelected = selectedOrder?.orderID == order.orderID\r\n                        val productIds = getProductIdsForOrder(order.orderID)\r\n\r\n                        Card(\r\n                            modifier = Modifier\r\n                                .fillMaxWidth()\r\n                                .padding(8.dp)\r\n                                .clickable {\r\n                                    Log.d(\"DB_QUERY\", \"Retrieved Order ID: ${order.orderID}\")\r\n                                    selectedOrder = order\r\n                                },\r\n                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),\r\n                            colors = CardDefaults.cardColors(\r\n                                containerColor = if (isSelected) Color.Gray else Color.White\r\n                            )\r\n                        ) {\r\n                            Column(modifier = Modifier.padding(16.dp)) {\r\n                                Text(\"Order ID: ${order.orderID}\")\r\n                                Text(\"Customer ID: ${order.customerID}\")\r\n                                Text(\"Total Price: ${order.totalPrice}\")\r\n                                Text(\"Promo ID: ${order.promoID}\")\r\n                                Text(\"Status: ${order.status}\")\r\n                                Text(\"Order Date: ${order.orderDate}\")\r\n                                Text(\"Payment Type: ${order.paymentType}\")\r\n                                Text(\"Product IDs: $productIds\")\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n\r\n            // Rest of the existing code remains the same\r\n            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {\r\n                Button(onClick = { navController.navigate(\"order_insert\") }) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(\r\n                    onClick = { selectedOrder?.let { navController.navigate(\"order_edit/${it.orderID}\") } },\r\n                    enabled = selectedOrder != null\r\n                ) {\r\n                    Text(\"Edit\")\r\n                }\r\n                Button(\r\n                    onClick = {\r\n                        selectedOrder?.let {\r\n                            orderHandler.deleteData(it.orderID)\r\n                            // Also delete associated order details\r\n                            OrderDetailsHandler(context).deleteData(it.orderID)\r\n                            orders.value = orderHandler.readData()\r\n                        }\r\n                    },\r\n                    enabled = selectedOrder != null\r\n                ) {\r\n                    Text(\"Delete\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n@OptIn(ExperimentalMaterial3Api::class)\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun OrderEdit(navController: NavController, orderID: Int? = null) {\r\n    val context = LocalContext.current\r\n    val orderHandler = OrderHandler(context)\r\n    val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }\r\n\r\n    var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: \"\") }\r\n    var totalPrice by remember { mutableStateOf(order.value?.totalPrice?.toString() ?: \"\") }\r\n    var promoID by remember { mutableStateOf(order.value?.promoID?.toString() ?: \"\") }\r\n    var status by remember { mutableStateOf(order.value?.status ?: \"\") }\r\n    var orderDate by remember { mutableStateOf(order.value?.orderDate?.toString() ?: LocalDate.now().toString()) }\r\n    var paymentType by remember { mutableStateOf(order.value?.paymentType ?: \"\") }\r\n    var expandedStat by remember { mutableStateOf(false)}\r\n    val statuses = listOf(\"Pending\", \"Completed\", \"Cancelled\")\r\n    val paymentMethods = listOf(\"Cash On Delivery\", \"GCash\", \"CreditCard\")\r\n    var expandedPay by remember { mutableStateOf(false)}\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            TextField(\r\n                value = customerID,\r\n                onValueChange = { customerID = it },\r\n                label = { Text(\"Customer ID\") })\r\n            TextField(\r\n                value = totalPrice,\r\n                onValueChange = { totalPrice = it },\r\n                label = { Text(\"Total Price\") })\r\n            TextField(\r\n                value = promoID,\r\n                onValueChange = { promoID = it },\r\n                label = { Text(\"Promo ID\") })\r\n            ExposedDropdownMenuBox(expanded = expandedStat, onExpandedChange = { expandedStat = it }\r\n            ) {\r\n                TextField(\r\n                    value = status,\r\n                    onValueChange = {},\r\n                    readOnly = true,\r\n                    label = { Text(\"Status\") },\r\n                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },\r\n                    modifier = Modifier.menuAnchor()\r\n                )\r\n                ExposedDropdownMenu(\r\n                    expanded = expandedStat,\r\n                    onDismissRequest = { expandedStat = false }\r\n                ) {\r\n                    statuses.forEach { option ->\r\n                        DropdownMenuItem(\r\n                            text = { Text(option) },\r\n                            onClick = {\r\n                                status = option\r\n                                expandedStat = false\r\n                            }\r\n                        )\r\n                    }\r\n                }\r\n            }\r\n            TextField(\r\n                value = orderDate,\r\n                onValueChange = { orderDate = it },\r\n                label = { Text(\"Order Date\") })\r\n            ExposedDropdownMenuBox(\r\n                expanded = expandedPay,\r\n                onExpandedChange = { expandedPay = it }) {\r\n                TextField(value = paymentType,\r\n                    onValueChange = {},\r\n                    readOnly = true,\r\n                    label = { Text(\"Payment Method\") },\r\n                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPay) },\r\n                    modifier = Modifier.menuAnchor()\r\n                )\r\n                ExposedDropdownMenu(\r\n                    expanded = expandedPay,\r\n                    onDismissRequest = { expandedPay = false }\r\n                ) {\r\n                    paymentMethods.forEach { option ->\r\n                        DropdownMenuItem(\r\n                            text = { Text(option) },\r\n                            onClick = {\r\n                                paymentType = option\r\n                                expandedPay = false\r\n                            }\r\n                        )\r\n                    }\r\n                }\r\n            }\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = {\r\n                    val updatedOrder = Order(\r\n                        order.value?.orderID ?: 0,\r\n                        customerID.toIntOrNull() ?: 0,\r\n                        totalPrice.toFloatOrNull() ?: 0f,\r\n                        promoID.toIntOrNull() ?: 0,\r\n                        status,\r\n                        LocalDate.parse(orderDate),\r\n                        paymentType\r\n                    ).apply { if (orderID != null) this.orderID = orderID }\r\n\r\n                    if (orderID != null) {\r\n                        orderHandler.updateData(updatedOrder)\r\n                    } else {\r\n                        orderHandler.insertData(updatedOrder)\r\n                    }\r\n                    navController.popBackStack()\r\n                }) {\r\n                    Text(\"OK\")\r\n                }\r\n\r\n                Button(onClick = { navController.popBackStack() }) {\r\n                    Text(\"Back\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun OrderInsert(navController: NavController) {\r\n    val context = LocalContext.current\r\n    val orderHandler = OrderHandler(context)\r\n    val orderDetailHandler = OrderDetailsHandler(context)\r\n\r\n    var tempOrderID by remember { mutableStateOf(orderHandler.getLatestOrderID()) }\r\n    var orderID by remember { mutableStateOf(\"\") }\r\n    var customerID by rememberSaveable { mutableStateOf(\"\") }\r\n    var totalPrice by remember { mutableStateOf(0) }\r\n    var promoID by rememberSaveable { mutableStateOf(\"\") }\r\n    var status by rememberSaveable { mutableStateOf(\"\") }\r\n    var orderDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }\r\n    var paymentType by rememberSaveable { mutableStateOf(\"\") }\r\n    var expandedStat by rememberSaveable { mutableStateOf(false) }\r\n    val statuses = listOf(\"Pending\", \"Completed\", \"Cancelled\")\r\n    val paymentMethods = listOf(\"Cash On Delivery\", \"GCash\", \"CreditCard\")\r\n    var expandedPay by rememberSaveable { mutableStateOf(false) }\r\n\r\n    var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair\r\n\r\n    // Calculate total price automatically when products are received\r\n    LaunchedEffect(navController.currentBackStackEntry) {\r\n        Log.d(\"DEBUG\", \"LaunchedEffect Triggered\")\r\n\r\n        val gson = Gson()\r\n        navController.currentBackStackEntry\r\n            ?.savedStateHandle\r\n            ?.get<String>(\"selected_products\")\r\n            ?.let { json ->\r\n                Log.d(\"DEBUG\", \"JSON Data: $json\")\r\n\r\n                val type = object : TypeToken<List<Map<String, Any>>>() {}.type\r\n                val productList: List<Map<String, Any>> = gson.fromJson(json, type)\r\n\r\n                // Clear list every time before adding new products\r\n                selectedProducts = emptyList()\r\n\r\n                selectedProducts = productList.map { map ->\r\n                    val productMap = map[\"first\"] as? Map<String, Any> ?: emptyMap()\r\n\r\n                    val product = Products(\r\n                        productMap[\"Product_ID\"] as? Int ?: 0,\r\n                        productMap[\"Product_name\"] as? String ?: \"\",\r\n                        (productMap[\"Price\"] as? Double)?.toInt() ?: 0\r\n                    )\r\n\r\n                    val quantity = (map[\"second\"] as? Double)?.toInt() ?: 0\r\n\r\n                    Log.d(\"DEBUG\", \"Product: ${product.Product_name}, Quantity: $quantity\")\r\n\r\n                    Pair(product, quantity)\r\n                }\r\n\r\n                // Calculate Total Price\r\n                totalPrice = selectedProducts.sumOf { (product, quantity) ->\r\n                    product.Price * quantity\r\n                }\r\n                Log.d(\"DEBUG\", \"Total Price: $totalPrice\")\r\n            }\r\n    }\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            TextField(\r\n                value = customerID,\r\n                onValueChange = { customerID = it },\r\n                label = { Text(\"Customer ID\") }\r\n\r\n            )\r\n\r\n            Button(\r\n                onClick = {\r\n                    val gson = Gson()\r\n                    val jsonProducts = gson.toJson(selectedProducts)\r\n                    navController.currentBackStackEntry\r\n                        ?.savedStateHandle\r\n                        ?.set(\"selected_products\", jsonProducts)\r\n                    navController.navigate(\"select_products\")\r\n                },\r\n                modifier = Modifier.width(280.dp),\r\n                shape = RoundedCornerShape(0.dp),\r\n                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))\r\n            ) {\r\n                Text(if (selectedProducts.isEmpty()) \"Products: None Selected\" else \"Products: ${selectedProducts.size} Selected\")\r\n            }\r\n\r\n            TextField(\r\n                value = totalPrice.toString(),\r\n                onValueChange = {totalPrice = it.toInt()},\r\n                readOnly = true,\r\n                colors = TextFieldDefaults.colors(\r\n                    focusedContainerColor = Color(0xFFFFA500),\r\n                    unfocusedLabelColor = Color(0xFFA26D00)\r\n                ),\r\n                label = { Text(\"Total Price\") }\r\n            )\r\n\r\n            TextField(\r\n                value = promoID,\r\n                onValueChange = { promoID = it },\r\n                colors = TextFieldDefaults.colors(\r\n                    focusedContainerColor = Color(0xFFFFA500),\r\n                    unfocusedLabelColor = Color(0xFFA26D00)\r\n                ),\r\n                label = { Text(\"Promo ID\") })\r\n\r\n            ExposedDropdownMenuBox(\r\n                expanded = expandedStat,\r\n                onExpandedChange = { expandedStat = it }) {\r\n                TextField(value = status,\r\n                    onValueChange = {},\r\n                    readOnly = true,\r\n                    label = { Text(\"Status\") },\r\n                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },\r\n                    modifier = Modifier.menuAnchor(),\r\n                    colors = TextFieldDefaults.colors(\r\n                        focusedContainerColor = Color(0xFFFFA500),\r\n                        unfocusedLabelColor = Color(0xFFA26D00)\r\n                    ),\r\n                )\r\n                ExposedDropdownMenu(\r\n                    expanded = expandedStat,\r\n                    onDismissRequest = { expandedStat = false }) {\r\n                    statuses.forEach { option ->\r\n                        DropdownMenuItem(text = { Text(option) }, onClick = {\r\n                            status = option\r\n                            expandedStat = false\r\n                        })\r\n                    }\r\n                }\r\n            }\r\n\r\n            TextField(\r\n                value = orderDate,\r\n                onValueChange = { orderDate = it },\r\n                colors = TextFieldDefaults.colors(\r\n                    focusedContainerColor = Color(0xFFFFA500),\r\n                    unfocusedLabelColor = Color(0xFFA26D00)\r\n                ),\r\n                label = { Text(\"Order Date\") })\r\n\r\n            ExposedDropdownMenuBox(\r\n                expanded = expandedPay,\r\n                onExpandedChange = { expandedPay = it }) {\r\n                TextField(value = paymentType,\r\n                    onValueChange = {},\r\n                    readOnly = true,\r\n                    label = { Text(\"Payment Method\") },\r\n                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPay) },\r\n                    modifier = Modifier.menuAnchor(),\r\n                    colors = TextFieldDefaults.colors(\r\n                        focusedContainerColor = Color(0xFFFFA500),\r\n                        unfocusedLabelColor = Color(0xFFA26D00)\r\n                    )\r\n                )\r\n                ExposedDropdownMenu(\r\n                    expanded = expandedPay,\r\n                    onDismissRequest = { expandedPay = false }) {\r\n                    paymentMethods.forEach { option ->\r\n                        DropdownMenuItem(text = { Text(option) }, onClick = {\r\n                            paymentType = option\r\n                            expandedPay = false\r\n                        })\r\n                    }\r\n                }\r\n            }\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = {\r\n                    // First, insert the order\r\n                    val newOrder = Order(\r\n                        orderID.toIntOrNull() ?: 0,\r\n                        customerID.toIntOrNull() ?: 0,\r\n                        totalPrice.toFloat(),\r\n                        promoID.toIntOrNull() ?: 0,\r\n                        status,\r\n                        LocalDate.parse(orderDate),\r\n                        paymentType\r\n                    )\r\n\r\n                    // Get the actual inserted order ID\r\n                    val insertedOrderId = if (orderHandler.insertData(newOrder)) {\r\n                        // If order insertion is successful, get the latest order ID\r\n                        orderHandler.getLatestOrderID()\r\n                    } else {\r\n                        // If order insertion fails, return without inserting order details\r\n                        Toast.makeText(context, \"Failed to insert order\", Toast.LENGTH_SHORT).show()\r\n                        return@Button\r\n                    }\r\n\r\n                    // Then, insert order details for each selected product\r\n                    selectedProducts.forEach { (product, quantity) ->\r\n                        val orderDetail = OrderDetails(\r\n                            orderID = insertedOrderId,\r\n                            productID = product.Product_ID,\r\n                            quantity = quantity\r\n                        )\r\n                        orderDetailHandler.insertData(orderDetail)\r\n                    }\r\n\r\n                    navController.popBackStack()\r\n                },\r\n                    shape = RoundedCornerShape(0.dp),\r\n                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))\r\n                ) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(onClick = {\r\n                    if (orderDetailHandler.readData(tempOrderID).isNotEmpty()) {\r\n                        orderDetailHandler.deleteData(tempOrderID)\r\n                        navController.popBackStack()\r\n                    }\r\n                    navController.popBackStack()\r\n                },\r\n                    shape = RoundedCornerShape(0.dp),\r\n                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))\r\n                    ) {\r\n                    Text(\"Back\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun SeeMenu(navController: NavController) {\r\n    val context = LocalContext.current\r\n    val productHandler = remember { ProductsHandler(context) }\r\n    val products = remember { mutableStateOf(productHandler.readData()) }\r\n    var selectedProduct by remember { mutableStateOf<Products?>(null) }\r\n\r\n\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            Box(\r\n                modifier = Modifier\r\n                    .weight(1f)  // ✅ Allows LazyColumn to scroll\r\n                    .fillMaxWidth()\r\n            ) {\r\n                LazyColumn(\r\n                    modifier = Modifier\r\n                        .fillMaxSize()\r\n                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom\r\n                ) {\r\n                    items(products.value, key = { it.Product_ID }) { product ->\r\n                        val isSelected = selectedProduct?.Product_ID == product.Product_ID\r\n                        Card(\r\n                            modifier = Modifier\r\n                                .fillMaxWidth()\r\n                                .padding(8.dp)\r\n                                .clickable {\r\n                                    Log.d(\"DB_QUERY\", \"Retrieved Product ID: ${product.Product_ID}\")\r\n                                    selectedProduct = product\r\n                                },\r\n                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),\r\n                            colors = CardDefaults.cardColors(\r\n                                containerColor = if (isSelected) Color.Gray else Color.White\r\n                            )\r\n                        ) {\r\n                            Column(modifier = Modifier.padding(16.dp)) {\r\n                                Text(\"Product ID: ${product.Product_ID}\")\r\n                                Text(\"Product Name: ${product.Product_name}\")\r\n                                Text(\"Price: ${product.Price}\")\r\n\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = { navController.navigate(\"product_insert\") }) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(\r\n                    onClick = { selectedProduct?.let { navController.navigate(\"product_edit/${it.Product_ID}\") } },\r\n                    enabled = selectedProduct != null\r\n                ) {\r\n                    Text(\"Edit\")\r\n                }\r\n\r\n                Button(\r\n                    onClick = {\r\n                        selectedProduct?.let { productHandler.deleteData(it.Product_ID) }\r\n                        products.value = productHandler.readData()\r\n                    },\r\n                    enabled = selectedProduct != null\r\n                ) {\r\n                    Text(\"Delete\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun ProductInsert(navController: NavController){\r\n    val context = LocalContext.current\r\n    val productHandler = ProductsHandler(context)\r\n\r\n    var productID by remember { mutableStateOf(\"\")}\r\n    var productName by remember { mutableStateOf(\"\")}\r\n    var price by remember { mutableStateOf(\"\")}\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            TextField(\r\n                value = productName,\r\n                onValueChange = { productName = it },\r\n                label = { Text(\"Product Name\") })\r\n            TextField(value = price, onValueChange = { price = it }, label = { Text(\"Price\") })\r\n\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = {\r\n                    val newProduct = Products(\r\n                        productID.toIntOrNull() ?: 0,\r\n                        productName,\r\n                        price.toIntOrNull() ?: 0,\r\n\r\n                        )\r\n                    productHandler.insertData(newProduct)\r\n                    navController.popBackStack()\r\n                }) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(onClick = { navController.popBackStack() }) {\r\n                    Text(\"Back\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun ProductEdit(navController: NavController, productID: Int? = null) {\r\n    val context = LocalContext.current\r\n    val productHandler = ProductsHandler(context)\r\n    val product = remember { mutableStateOf(productID?.let { productHandler.readData(it).firstOrNull() }) }\r\n\r\n\r\n    var productName by remember { mutableStateOf(product.value?.Product_name?.toString() ?: \"\") }\r\n    var price by remember { mutableStateOf(product.value?.Price?.toString() ?: \"\") }\r\n\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n\r\n            TextField(\r\n                value = productName,\r\n                onValueChange = { productName = it },\r\n                label = { Text(\"Product Name\") })\r\n            TextField(value = price, onValueChange = { price = it }, label = { Text(\"Price\") })\r\n\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = {\r\n                    val updatedProduct = Products(\r\n                        product.value?.Product_ID ?: 0,\r\n                        productName.toString() ?: \"\",\r\n                        price.toIntOrNull() ?: 0,\r\n\r\n                        ).apply { if (productID != null) this.Product_ID = productID }\r\n\r\n                    if (productID != null) {\r\n                        productHandler.updateData(updatedProduct)\r\n                    } else {\r\n                        productHandler.insertData(updatedProduct)\r\n                    }\r\n                    navController.popBackStack()\r\n                }) {\r\n                    Text(\"OK\")\r\n                }\r\n\r\n                Button(onClick = { navController.popBackStack() }) {\r\n                    Text(\"Back\")\r\n                }\r\n\r\n\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun InventoryScreen(navController: NavHostController) {\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.TopCenter // Align content in the top center\r\n\r\n    ) {\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n    }\r\n}\r\n\r\n@Composable\r\nfun CustomerScreen(navController: NavHostController) {\r\n    val context = LocalContext.current\r\n    val customerHandler = remember { CustomerHandler(context) }\r\n    val customers = remember { mutableStateOf(customerHandler.readData()) }\r\n    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.TopCenter // Align content in the top center\r\n\r\n    ) {\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            Box(\r\n                modifier = Modifier\r\n                    .weight(1f)  // ✅ Allows LazyColumn to scroll\r\n                    .fillMaxWidth()\r\n            ) {\r\n                LazyColumn(\r\n                    modifier = Modifier\r\n                        .fillMaxSize()\r\n                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom\r\n                ) {\r\n                    items(customers.value, key = { it.Customer_ID }) { customer ->\r\n                        val isSelected = selectedCustomer?.Customer_ID == customer.Customer_ID\r\n                        Card(\r\n                            modifier = Modifier\r\n                                .fillMaxWidth()\r\n                                .padding(8.dp)\r\n                                .clickable {\r\n                                    Log.d(\r\n                                        \"DB_QUERY\",\r\n                                        \"Retrieved Product ID: ${customer.Customer_ID}\"\r\n                                    )\r\n                                    selectedCustomer = customer\r\n                                },\r\n                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),\r\n                            colors = CardDefaults.cardColors(\r\n                                containerColor = if (isSelected) Color.Gray else Color.White\r\n                            )\r\n                        ) {\r\n                            Column(modifier = Modifier.padding(16.dp)) {\r\n                                Text(\"Customer ID: ${customer.Customer_ID}\")\r\n                                Text(\"Name: ${customer.Name}\")\r\n                                Text(\"Type: ${customer.Type}\")\r\n                                Text(\"Address: ${customer.Address}\")\r\n\r\n                            }\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = { navController.navigate(\"customer_insert\") }) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(\r\n                    onClick = { selectedCustomer?.let { navController.navigate(\"customer_edit/${it.Customer_ID}\") } },\r\n                    enabled = selectedCustomer != null\r\n                ) {\r\n                    Text(\"Edit\")\r\n                }\r\n\r\n                Button(\r\n                    onClick = {\r\n                        selectedCustomer?.let { customerHandler.deleteData(it.Customer_ID)}\r\n                        customers.value = customerHandler.readData()\r\n                    },\r\n                    enabled = selectedCustomer != null\r\n                ) {\r\n                    Text(\"Delete\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun CustomerInsert(navController: NavController) {\r\n    val context = LocalContext.current\r\n    val customerHandler = CustomerHandler(context)\r\n\r\n    var customerID by remember { mutableStateOf(\"\") }\r\n    var name by remember { mutableStateOf(\"\") }\r\n    var type by remember { mutableStateOf(\"\") }\r\n    var address by remember { mutableStateOf(\"\") }\r\n    val customerTypes = listOf(\"New\", \"Regular\", \"Returning\")\r\n    var expandedCusTyp by remember { mutableStateOf(false)}\r\n\r\n    Box(modifier = Modifier\r\n        .background(Color.White)\r\n        .fillMaxSize()){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .padding(16.dp),\r\n            verticalArrangement = Arrangement.spacedBy(8.dp),\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            TextField(value = name, onValueChange = { name = it }, label = { Text(\"Name\") })\r\n            ExposedDropdownMenuBox(\r\n                expanded = expandedCusTyp,\r\n                onExpandedChange = { expandedCusTyp = it }) {\r\n                TextField(value = type,\r\n                    onValueChange = {},\r\n                    readOnly = true,\r\n                    label = { Text(\"Customer Type\") },\r\n                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCusTyp) },\r\n                    modifier = Modifier.menuAnchor()\r\n                )\r\n                ExposedDropdownMenu(\r\n                    expanded = expandedCusTyp,\r\n                    onDismissRequest = { expandedCusTyp = false }\r\n                ) {\r\n                    customerTypes.forEach { option ->\r\n                        DropdownMenuItem(\r\n                            text = { Text(option) },\r\n                            onClick = {\r\n                                type = option\r\n                                expandedCusTyp = false\r\n                            }\r\n                        )\r\n                    }\r\n                }\r\n            }\r\n            TextField(\r\n                value = address,\r\n                onValueChange = { address = it },\r\n                label = { Text(\"Address\") })\r\n\r\n\r\n            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n                Button(onClick = {\r\n                    val newCustomer = Customer(\r\n                        customerID.toIntOrNull() ?: 0,\r\n                        name,\r\n                        type,\r\n                        address\r\n                    )\r\n                    customerHandler.insertData(newCustomer)\r\n                    navController.popBackStack()\r\n                }) {\r\n                    Text(\"Insert\")\r\n                }\r\n\r\n                Button(onClick = { navController.popBackStack() }) {\r\n                    Text(\"Back\")\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun CustomerEdit(navController: NavController, customerID: Int? = null){\r\n    val context = LocalContext.current\r\n    val customerHandler = CustomerHandler(context)\r\n    val customer = remember { mutableStateOf(customerID?.let { customerHandler.readData(it).firstOrNull() }) }\r\n    val customerTypes = listOf(\"New\", \"Regular\", \"Returning\")\r\n    var expandedCusTyp by remember { mutableStateOf(false)}\r\n\r\n    var name by remember {mutableStateOf(customer.value?.Name?.toString() ?: \"\")}\r\n    var type by remember {mutableStateOf(customer.value?.Type?.toString() ?: \"\")}\r\n    var address by remember {mutableStateOf(customer.value?.Address?.toString() ?: \"\")}\r\n\r\n\r\n\r\n    Column(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .padding(16.dp),\r\n        verticalArrangement = Arrangement.spacedBy(8.dp),\r\n        horizontalAlignment = Alignment.CenterHorizontally\r\n    ) {\r\n        TextField(value = name, onValueChange = {name = it }, label = { Text(\"Name\") })\r\n        ExposedDropdownMenuBox(expanded = expandedCusTyp, onExpandedChange = {expandedCusTyp = it}) {\r\n            TextField(value = type, onValueChange = {}, readOnly = true, label = {Text(\"Customer Type\")},\r\n                trailingIcon = {ExposedDropdownMenuDefaults.TrailingIcon(expanded=expandedCusTyp)},\r\n                modifier = Modifier.menuAnchor())\r\n            ExposedDropdownMenu(\r\n                expanded = expandedCusTyp,\r\n                onDismissRequest = {expandedCusTyp = false}\r\n            ) {\r\n                customerTypes.forEach { option ->\r\n                    DropdownMenuItem(\r\n                        text = { Text(option) },\r\n                        onClick = {\r\n                            type = option\r\n                            expandedCusTyp = false\r\n                        }\r\n                    )\r\n                }\r\n            }\r\n        }\r\n        TextField(value = address, onValueChange = { address = it }, label = { Text(\"Address\") })\r\n\r\n\r\n        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {\r\n            Button(onClick = {\r\n                val updatedCustomer = Customer(\r\n                    customer.value?.Customer_ID ?: 0,\r\n                    name,\r\n                    type,\r\n                    address\r\n                ).apply {if (customerID != null) this.Customer_ID = customerID }\r\n\r\n                if (customerID != null) {\r\n                    customerHandler.updateData(updatedCustomer)\r\n                } else {\r\n                    customerHandler.insertData(updatedCustomer)\r\n                }\r\n                navController.popBackStack()\r\n            }) {\r\n                Text(\"OK\")\r\n            }\r\n\r\n            Button(onClick = { navController.popBackStack() }) {\r\n                Text(\"Back\")\r\n            }\r\n        }\r\n    }\r\n}\r\n@Composable\r\nfun AnalyticsScreen(navController: NavHostController) {\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.TopCenter // Align content in the top center\r\n\r\n    ) {\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n    }\r\n}\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Composable\r\nfun SelectProducts(navController: NavController) {\r\n    val context = LocalContext.current\r\n    val productHandler = remember { ProductsHandler(context) }\r\n    val products = remember { mutableStateOf(productHandler.readData()) }\r\n    val gson = Gson()\r\n\r\n    val receivedProducts = navController.previousBackStackEntry\r\n        ?.savedStateHandle\r\n        ?.get<String>(\"selected_products\")\r\n        ?.let { json ->\r\n            gson.fromJson(json, Array<Products>::class.java).toList()\r\n        } ?: emptyList()\r\n\r\n    val selectedProducts = remember { mutableStateListOf<Pair<Products, Int>>() }\r\n    var showDialog by remember { mutableStateOf(false) }\r\n    var selectedProduct by remember { mutableStateOf<Products?>(null) }\r\n    var quantity by remember { mutableStateOf(\"\") }\r\n\r\n    // Add received products to the list with default quantity\r\n    LaunchedEffect(true) {\r\n        // Always clear the list every time the screen is opened\r\n        selectedProducts.clear()\r\n        receivedProducts.forEach {\r\n            selectedProducts.add(it to 1) // Add received products with default quantity\r\n        }\r\n    }\r\n\r\n\r\n    Column(\r\n        modifier = Modifier\r\n            .fillMaxSize()\r\n            .padding(16.dp),\r\n        verticalArrangement = Arrangement.spacedBy(8.dp),\r\n        horizontalAlignment = Alignment.CenterHorizontally\r\n    ) {\r\n        Text(\r\n            text = \"Select Products\",\r\n            style = MaterialTheme.typography.headlineMedium,\r\n            modifier = Modifier.padding(bottom = 16.dp)\r\n        )\r\n\r\n        LazyColumn(\r\n            modifier = Modifier.weight(1f)\r\n        ) {\r\n            items(products.value, key = { it.Product_ID }) { product ->\r\n                val selected = selectedProducts.find { it.first.Product_ID == product.Product_ID }\r\n                val isSelected = selected != null\r\n\r\n                Card(\r\n                    modifier = Modifier\r\n                        .fillMaxWidth()\r\n                        .padding(8.dp)\r\n                        .clickable {\r\n                            selectedProduct = product\r\n                            quantity = selected?.second?.toString() ?: \"\"\r\n                            showDialog = true\r\n                        },\r\n                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),\r\n                    colors = CardDefaults.cardColors(\r\n                        containerColor = if (isSelected) Color.Gray else Color.White\r\n                    )\r\n                ) {\r\n                    Row(\r\n                        modifier = Modifier\r\n                            .fillMaxWidth()\r\n                            .padding(16.dp),\r\n                        verticalAlignment = Alignment.CenterVertically,\r\n                        horizontalArrangement = Arrangement.SpaceBetween\r\n                    ) {\r\n                        Column {\r\n                            Text(\"Product ID: ${product.Product_ID}\")\r\n                            Text(\"Product Name: ${product.Product_name}\")\r\n                            Text(\"Price: ${product.Price}\")\r\n                        }\r\n                        if (isSelected) {\r\n                            Text(\"Qty: ${selected?.second}\", color = Color.Blue)\r\n                        }\r\n                    }\r\n                }\r\n            }\r\n        }\r\n\r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(top = 16.dp),\r\n            horizontalArrangement = Arrangement.SpaceBetween\r\n        ) {\r\n            Button(onClick = { navController.popBackStack() }) {\r\n                Text(\"Cancel\")\r\n            }\r\n\r\n            Text(\"${selectedProducts.size} Products Selected\")\r\n\r\n            Button(\r\n                onClick = {\r\n                    navController.previousBackStackEntry\r\n                        ?.savedStateHandle\r\n                        ?.set(\"selected_products\", gson.toJson(selectedProducts))\r\n                    navController.popBackStack()\r\n                }\r\n            ) {\r\n                Text(\"Ok\")\r\n            }\r\n        }\r\n    }\r\n\r\n    // Quantity Dialog\r\n    if (showDialog) {\r\n        AlertDialog(\r\n            onDismissRequest = { showDialog = false },\r\n            title = { Text(\"Enter Quantity\") },\r\n            text = {\r\n                OutlinedTextField(\r\n                    value = quantity,\r\n                    onValueChange = { quantity = it },\r\n                    label = { Text(\"Quantity\") },\r\n                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)\r\n                )\r\n            },\r\n            confirmButton = {\r\n                Button(onClick = {\r\n                    if (quantity.isNotBlank()) {\r\n                        val qty = quantity.toInt()\r\n                        if (qty > 0) {\r\n                            selectedProducts.removeIf { it.first.Product_ID == selectedProduct?.Product_ID }\r\n                            selectedProducts.add(selectedProduct!! to qty)\r\n                        }\r\n                        showDialog = false\r\n                    }\r\n                }) {\r\n                    Text(\"Ok\")\r\n                }\r\n            },\r\n            dismissButton = {\r\n                Button(onClick = { showDialog = false }) {\r\n                    Text(\"Cancel\")\r\n                }\r\n            }\r\n        )\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/ordertrackingapp/FuncsActivity.kt b/app/src/main/java/com/example/ordertrackingapp/FuncsActivity.kt
+--- a/app/src/main/java/com/example/ordertrackingapp/FuncsActivity.kt	(revision 8ecc3caa460cd864caa5ea70ebe83627613c5ffd)
++++ b/app/src/main/java/com/example/ordertrackingapp/FuncsActivity.kt	(date 1741192777948)
+@@ -4,6 +4,7 @@
+ 
+ import android.os.Build
+ import android.util.Log
++import androidx.compose.ui.unit.sp
+ import android.widget.Toast
+ import androidx.annotation.RequiresApi
+ import androidx.compose.foundation.layout.*
+@@ -186,20 +187,37 @@
+             TextField(
+                 value = customerID,
+                 onValueChange = { customerID = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
+                 label = { Text("Customer ID") })
++
+             TextField(
+                 value = totalPrice,
+                 onValueChange = { totalPrice = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
+                 label = { Text("Total Price") })
+             TextField(
+                 value = promoID,
+                 onValueChange = { promoID = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
+                 label = { Text("Promo ID") })
+             ExposedDropdownMenuBox(expanded = expandedStat, onExpandedChange = { expandedStat = it }
+             ) {
+                 TextField(
+                     value = status,
+                     onValueChange = {},
++                    colors = TextFieldDefaults.colors(
++                        focusedContainerColor = Color(0xFFFFA500),
++                        unfocusedLabelColor = Color(0xFFA26D00)
++                    ),
+                     readOnly = true,
+                     label = { Text("Status") },
+                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },
+@@ -223,6 +241,10 @@
+             TextField(
+                 value = orderDate,
+                 onValueChange = { orderDate = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
+                 label = { Text("Order Date") })
+             ExposedDropdownMenuBox(
+                 expanded = expandedPay,
+@@ -230,7 +252,12 @@
+                 TextField(value = paymentType,
+                     onValueChange = {},
+                     readOnly = true,
++                    colors = TextFieldDefaults.colors(
++                        focusedContainerColor = Color(0xFFFFA500),
++                        unfocusedLabelColor = Color(0xFFA26D00)
++                    ),
+                     label = { Text("Payment Method") },
++
+                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPay) },
+                     modifier = Modifier.menuAnchor()
+                 )
+@@ -268,11 +295,15 @@
+                         orderHandler.insertData(updatedOrder)
+                     }
+                     navController.popBackStack()
+-                }) {
++                },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++                ) {
+                     Text("OK")
+                 }
+ 
+-                Button(onClick = { navController.popBackStack() }) {
++                Button(onClick = { navController.popBackStack() },  shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
+                     Text("Back")
+                 }
+             }
+@@ -637,15 +668,33 @@
+         Column(
+             modifier = Modifier
+                 .fillMaxSize()
++                .offset(y = 300.dp)
+                 .padding(16.dp),
+             verticalArrangement = Arrangement.spacedBy(8.dp),
+             horizontalAlignment = Alignment.CenterHorizontally
+         ) {
++            Text(
++                text = "Add a Product",
++                fontSize = 30.sp
++            )
+             TextField(
+                 value = productName,
+                 onValueChange = { productName = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++
+                 label = { Text("Product Name") })
+-            TextField(value = price, onValueChange = { price = it }, label = { Text("Price") })
++            TextField(
++                value = price,
++                onValueChange = { price = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++
++                label = { Text("Price") })
+ 
+ 
+             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@@ -658,11 +707,19 @@
+                         )
+                     productHandler.insertData(newProduct)
+                     navController.popBackStack()
+-                }) {
++                },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++                ) {
+                     Text("Insert")
+                 }
+ 
+-                Button(onClick = { navController.popBackStack() }) {
++                Button(
++                    onClick = {
++                    navController.popBackStack()
++                  },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
+                     Text("Back")
+                 }
+             }
+@@ -873,16 +930,28 @@
+         Column(
+             modifier = Modifier
+                 .fillMaxSize()
++                .offset(y = 300.dp)
+                 .padding(16.dp),
+             verticalArrangement = Arrangement.spacedBy(8.dp),
+             horizontalAlignment = Alignment.CenterHorizontally
+         ) {
+-            TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
++            Text(
++                text = "Add Customer",
++                fontSize = 30.sp
++            )
++            TextField(value = name, onValueChange = { name = it }, colors = TextFieldDefaults.colors(
++                focusedContainerColor = Color(0xFFFFA500),
++                unfocusedLabelColor = Color(0xFFA26D00)
++            ),label = { Text("Name") })
+             ExposedDropdownMenuBox(
+                 expanded = expandedCusTyp,
+                 onExpandedChange = { expandedCusTyp = it }) {
+                 TextField(value = type,
+                     onValueChange = {},
++                    colors = TextFieldDefaults.colors(
++                        focusedContainerColor = Color(0xFFFFA500),
++                        unfocusedLabelColor = Color(0xFFA26D00)
++                    ),
+                     readOnly = true,
+                     label = { Text("Customer Type") },
+                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCusTyp) },
+@@ -891,6 +960,7 @@
+                 ExposedDropdownMenu(
+                     expanded = expandedCusTyp,
+                     onDismissRequest = { expandedCusTyp = false }
++
+                 ) {
+                     customerTypes.forEach { option ->
+                         DropdownMenuItem(
+@@ -906,7 +976,12 @@
+             TextField(
+                 value = address,
+                 onValueChange = { address = it },
+-                label = { Text("Address") })
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++                label = { Text("Address") }
++            )
+ 
+ 
+             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@@ -917,13 +992,19 @@
+                         type,
+                         address
+                     )
++
+                     customerHandler.insertData(newCustomer)
+                     navController.popBackStack()
+-                }) {
++                },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++                ) {
+                     Text("Insert")
+                 }
+ 
+-                Button(onClick = { navController.popBackStack() }) {
++                Button(onClick = { navController.popBackStack()}, shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++                ) {
+                     Text("Back")
+                 }
+             }
+@@ -990,11 +1071,15 @@
+                     customerHandler.insertData(updatedCustomer)
+                 }
+                 navController.popBackStack()
+-            }) {
++            },
++                shape = RoundedCornerShape(0.dp),
++                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++            ) {
+                 Text("OK")
+             }
+ 
+-            Button(onClick = { navController.popBackStack() }) {
++            Button(onClick = { navController.popBackStack() }, shape = RoundedCornerShape(0.dp),
++                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
+                 Text("Back")
+             }
+         }
+@@ -1163,3 +1248,188 @@
+         )
+     }
+ }
++
++@Composable
++fun PromoScreen(navController: NavController){
++    val context = LocalContext.current
++    val promoHandler = remember { PromosHandler(context) }
++    val promos = remember { mutableStateOf(promoHandler.readData()) }
++    var selectedPromo by remember { mutableStateOf<Promos?>(null) }
++
++    Box(modifier = Modifier
++        .background(Color.White)
++        .fillMaxSize()){
++        Image(
++            painter = painterResource(id = R.drawable.foodstop_header),
++            contentDescription = "My Image",
++            modifier = Modifier
++                .size(600.dp)
++                .offset(y = -215.dp) // Adjust the image position
++        )
++
++        Column(
++            modifier = Modifier
++                .fillMaxSize()
++                .padding(16.dp),
++            verticalArrangement = Arrangement.spacedBy(8.dp),
++            horizontalAlignment = Alignment.CenterHorizontally
++        ) {
++            Box(
++                modifier = Modifier
++                    .weight(1f)  // ✅ Allows LazyColumn to scroll
++                    .fillMaxWidth()
++            ) {
++                LazyColumn(
++                    modifier = Modifier
++                        .fillMaxSize()
++                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
++                ) {
++                    items(promos.value, key = { it.Promo_ID }) { promo ->
++                        val isSelected = selectedPromo?.Promo_ID == promo.Promo_ID
++
++
++                        Card(
++                            modifier = Modifier
++                                .fillMaxWidth()
++                                .padding(8.dp)
++                                .clickable {
++                                    Log.d("DB_QUERY", "Retrieved Order ID: ${promo.Promo_ID}")
++                                    selectedPromo = promo
++                                },
++                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
++                            colors = CardDefaults.cardColors(
++                                containerColor = if (isSelected) Color.Gray else Color.White
++                            )
++                        ) {
++                            Column(modifier = Modifier.padding(16.dp)) {
++                                Text("Promo ID: ${promo.Promo_ID}")
++                                Text("Type: ${promo.Type}")
++                                Text("Discount Percent: ${promo.DiscountPercent}%")
++                                Text("Discount Flat: ${promo.DiscountFlat}")
++
++                            }
++                        }
++                    }
++                }
++            }
++
++            // Rest of the existing code remains the same
++            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
++                Button(onClick = { navController.navigate("promo_insert") }) {
++                    Text("Insert")
++                }
++
++                Button(
++                    onClick = { selectedPromo?.let { navController.navigate("promo_edit/${it.Promo_ID}") } },
++                    enabled = selectedPromo != null
++                ) {
++                    Text("Edit")
++                }
++                Button(
++                    onClick = {
++                        selectedPromo?.let {
++                            promoHandler.deleteData(it.Promo_ID)
++                            promos.value = promoHandler.readData()
++                        }
++                    },
++                    enabled = selectedPromo != null
++                ) {
++                    Text("Delete")
++                }
++            }
++        }
++    }
++}
++
++@Composable
++fun PromoInsert(navController: NavController){
++    val context = LocalContext.current
++    val promoHandler = PromosHandler(context)
++
++    var promoID by remember { mutableStateOf("")}
++    var type by remember { mutableStateOf("")}
++    var discountPercent by remember { mutableStateOf("")}
++    var discountFlat by remember { mutableStateOf("")}
++
++    Box(modifier = Modifier
++        .background(Color.White)
++        .fillMaxSize()){
++        Image(
++            painter = painterResource(id = R.drawable.foodstop_header),
++            contentDescription = "My Image",
++            modifier = Modifier
++                .size(600.dp)
++                .offset(y = -215.dp) // Adjust the image position
++        )
++        Column(
++            modifier = Modifier
++                .fillMaxSize()
++                .offset(y = 300.dp)
++                .padding(16.dp),
++            verticalArrangement = Arrangement.spacedBy(8.dp),
++            horizontalAlignment = Alignment.CenterHorizontally
++        ) {
++            Text(
++                text = "Add a Promo",
++                fontSize = 30.sp
++            )
++            TextField(
++                value = type,
++                onValueChange = { type = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++
++                label = { Text("Type") })
++            TextField(
++                value = discountPercent,
++                onValueChange = { discountPercent = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++
++                label = { Text("Discount Percent") })
++
++            TextField(
++                value = discountFlat,
++                onValueChange = { discountFlat = it },
++                colors = TextFieldDefaults.colors(
++                    focusedContainerColor = Color(0xFFFFA500),
++                    unfocusedLabelColor = Color(0xFFA26D00)
++                ),
++
++                label = { Text("Discount Flat") })
++
++
++            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                Button(onClick = {
++                    val newPromo = Promos(
++                        promoID.toIntOrNull() ?: 0,
++                        type,
++                        discountPercent.toIntOrNull() ?: 0,
++                        discountFlat.toIntOrNull() ?: 0
++
++                        )
++                    promoHandler.insertData(newPromo)
++                    navController.popBackStack()
++                },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
++                ) {
++                    Text("Insert")
++                }
++
++                Button(
++                    onClick = {
++                        navController.popBackStack()
++                    },
++                    shape = RoundedCornerShape(0.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
++                    Text("Back")
++                }
++            }
++        }
++    }
++}
+Index: app/src/main/java/com/example/ordertrackingapp/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.ordertrackingapp\r\n\r\nimport androidx.compose.animation.animateColorAsState\r\nimport androidx.compose.animation.core.animateFloatAsState\r\nimport androidx.compose.foundation.interaction.MutableInteractionSource\r\nimport androidx.compose.foundation.interaction.collectIsPressedAsState\r\nimport androidx.compose.foundation.layout.*\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport android.os.Build\r\nimport android.os.Bundle\r\nimport android.widget.Toast\r\nimport androidx.activity.ComponentActivity\r\nimport androidx.activity.compose.setContent\r\nimport androidx.activity.enableEdgeToEdge\r\nimport androidx.annotation.RequiresApi\r\nimport androidx.compose.foundation.Image\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.platform.LocalContext\r\nimport androidx.compose.ui.res.painterResource\r\nimport androidx.compose.ui.tooling.preview.Preview\r\nimport androidx.compose.ui.unit.dp\r\nimport com.example.ordertrackingapp.ui.theme.OrderTrackingAPPTheme\r\nimport androidx.core.view.WindowCompat\r\nimport androidx.core.view.WindowInsetsCompat\r\nimport androidx.core.view.WindowInsetsControllerCompat\r\nimport androidx.compose.ui.text.input.PasswordVisualTransformation\r\nimport androidx.navigation.NavController\r\nimport androidx.navigation.compose.NavHost\r\nimport androidx.navigation.compose.composable\r\nimport androidx.navigation.compose.rememberNavController\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.ui.graphics.graphicsLayer\r\n\r\n\r\nclass MainActivity : ComponentActivity() {\r\n    @RequiresApi(Build.VERSION_CODES.O)\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        super.onCreate(savedInstanceState)\r\n        enableEdgeToEdge()\r\n        WindowCompat.setDecorFitsSystemWindows(window, false)\r\n\r\n        // Hide the status bar\r\n        WindowInsetsControllerCompat(window, window.decorView).apply {\r\n            hide(WindowInsetsCompat.Type.statusBars()) // ✅ This works on lower APIs\r\n            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\r\n        }\r\n\r\n        setContent {\r\n            OrderTrackingAPPTheme {\r\n                AppNavigation()\r\n\r\n            }\r\n        }\r\n    }\r\n\r\n\r\n}\r\n\r\n\r\n\r\n\r\n\r\nclass CustomButton(\r\n    val label: String,\r\n    val onClick: () -> Unit,\r\n    val iconId: Int,\r\n    val backgroundColor: Color = Color(0xFFF6B819),\r\n    val contentColor: Color = Color.Black\r\n) {\r\n    @Composable\r\n    fun CreateButton() {\r\n        val interactionSource = remember { MutableInteractionSource() }\r\n        val isPressed by interactionSource.collectIsPressedAsState()\r\n\r\n        // Animate the button's background color based on the pressed state\r\n        val animatedBackgroundColor by animateColorAsState(\r\n            targetValue = if (isPressed) Color.Black else backgroundColor,\r\n            label = \"Button Background Color Animation\"\r\n        )\r\n\r\n        // Animate the content color based on the pressed state\r\n        val animatedContentColor by animateColorAsState(\r\n            targetValue = if (isPressed) Color(0xFFF6B819) else contentColor,\r\n            label = \"Button Content Color Animation\"\r\n        )\r\n\r\n        // Animate the scale of the button based on the pressed state\r\n        val scale by animateFloatAsState(\r\n            targetValue = if (isPressed) 0.95f else 1f,\r\n            label = \"Button Scale Animation\"\r\n        )\r\n\r\n        Button(\r\n            onClick = { onClick() }, // Call the provided onClick function\r\n            modifier = Modifier\r\n                .width(200.dp)\r\n                .height(120.dp)\r\n                .padding(10.dp)\r\n                .graphicsLayer(scaleX = scale, scaleY = scale),\r\n            interactionSource = interactionSource, // Pass the interaction source\r\n            shape = RoundedCornerShape(8.dp), // Optional: Add rounded corners\r\n            colors = ButtonDefaults.buttonColors(\r\n                containerColor = animatedBackgroundColor,\r\n                contentColor = animatedContentColor\r\n            )\r\n        ) {\r\n            Column(\r\n                horizontalAlignment = Alignment.CenterHorizontally,\r\n                verticalArrangement = Arrangement.Center\r\n            ) {\r\n                Icon(\r\n                    painter = painterResource(id = iconId),\r\n                    contentDescription = label,\r\n                    modifier = Modifier.size(45.dp),\r\n                    tint = animatedContentColor // Use animated content color\r\n                )\r\n                Spacer(modifier = Modifier.height(8.dp))\r\n                Text(\r\n                    text = label,\r\n                    color = animatedContentColor // Use animated content color\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@RequiresApi(Build.VERSION_CODES.O)\r\n@Preview(showBackground = true,\r\n    widthDp=360,\r\n    heightDp=806\r\n)\r\n@Composable\r\nfun AppNavigation() {\r\n    val navController = rememberNavController()\r\n\r\n    NavHost(navController = navController, startDestination = \"advanced\") {\r\n        composable(\"home\") {\r\n            HomeScreen(navController = navController)\r\n        }\r\n        composable(\"advanced\") {\r\n            AdvancedScreen(navController = navController)\r\n        }\r\n        composable(\"login\") {\r\n            LoginScreen(navController = navController) // Your Login Screen Composable\r\n        }\r\n\r\n\r\n        composable(\"analytics\") {\r\n            AnalyticsScreen(navController = navController)\r\n        }\r\n        composable(\"customer\") {\r\n            CustomerScreen(navController = navController)\r\n        }\r\n        composable(\"customer_insert\") {\r\n            CustomerInsert(navController = navController)\r\n        }\r\n        composable(\"customer_edit/{id}\") { backStackEntry ->\r\n            val customerId = backStackEntry.arguments?.getString(\"id\")\r\n            if (customerId != null) {\r\n                CustomerEdit(navController = navController, customerId.toInt())\r\n            }\r\n        }\r\n        composable(\"products\"){\r\n            SeeMenu(navController = navController)\r\n        }\r\n        composable(\"product_insert\"){\r\n            ProductInsert(navController = navController)\r\n        }\r\n        composable(\"product_edit/{id}\") { backStackEntry ->\r\n            val productId = backStackEntry.arguments?.getString(\"id\")\r\n            if (productId != null) {\r\n                ProductEdit(navController = navController, productId.toInt())\r\n            }\r\n        }\r\n        composable(\"order\") {\r\n            OrderScreen(navController = navController)\r\n        }\r\n        composable(\"order_insert\"){\r\n            OrderInsert(navController=navController)\r\n        }\r\n        composable(\"order_edit/{id}\") { backStackEntry ->\r\n            val orderId = backStackEntry.arguments?.getString(\"id\")\r\n            if (orderId != null) {\r\n                OrderEdit(navController = navController, orderId.toInt())\r\n            }\r\n        }\r\n\r\n        composable(\"select_products\") {\r\n            SelectProducts(navController)\r\n        }\r\n\r\n    }\r\n}\r\n\r\n\r\n\r\n\r\n\r\n@Composable\r\nfun LoginScreen(navController: NavController) {\r\n    var email by remember { mutableStateOf(\"\") }\r\n    var password by remember { mutableStateOf(\"\") }\r\n    val context = LocalContext.current\r\n    var text by remember { mutableStateOf(\"Initial\") }\r\n\r\n    // Use a Box to position elements manually\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.TopCenter // Align content in the top center\r\n\r\n    ) {\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp) // Adjust the image position\r\n        )\r\n\r\n        // Center the column content\r\n        Column(\r\n            modifier = Modifier\r\n                .align(Alignment.Center)\r\n                .wrapContentSize(),  // Avoid filling the entire screen\r\n            verticalArrangement = Arrangement.Center,\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n\r\n            TextField(\r\n                value = email,\r\n                onValueChange = {email = it},\r\n                label = {Text(\"Username\")},\r\n                singleLine = true,\r\n            )\r\n            Spacer(modifier = Modifier.height(40.dp))\r\n\r\n            TextField(\r\n                value = password,\r\n                onValueChange = {password = it},\r\n                label = {Text(\"Password\")},\r\n                singleLine = true,\r\n                visualTransformation = PasswordVisualTransformation() // Hides password\r\n            )\r\n        }\r\n\r\n        // Button placement\r\n        SubmitBTN(onClick = {\r\n            if((email == \"admin\" && password == \"Password\")||(email == \"\" && password == \"\")){\r\n                navController.navigate(\"home\")\r\n            } else {\r\n                Toast.makeText(context, \"Invalid Username or Password!\", Toast.LENGTH_SHORT).show()\r\n            }\r\n\r\n        })\r\n\r\n        // Forgot password and Register User links\r\n        Row(\r\n            modifier = Modifier\r\n                .offset(y = 650.dp)\r\n                .fillMaxWidth(),  // Ensure the Row takes up the full width\r\n            horizontalArrangement = Arrangement.Center\r\n\r\n        ) {\r\n            Text(\r\n                \"Forgot Password\",\r\n                modifier = Modifier\r\n                    .clickable {\r\n                        Toast.makeText(\r\n                            context,\r\n                            \"Forgot Password Clicked\",\r\n                            Toast.LENGTH_SHORT\r\n                        ).show()\r\n                    }\r\n                    .padding(0.dp, 0.dp, 0.dp, 0.dp)\r\n            )\r\n            Text(\r\n                \"Register User\",\r\n                modifier = Modifier\r\n                    .clickable {\r\n                        Toast.makeText(context, \"Register Clicked\", Toast.LENGTH_SHORT).show()\r\n                    }\r\n                    .padding(40.dp, 0.dp, 0.dp, 0.dp)\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\n\r\n\r\n@Composable\r\nfun SubmitBTN(onClick: () -> Unit) {\r\n    FilledTonalButton(\r\n        onClick = { onClick() },\r\n        modifier = Modifier\r\n            .offset(y = 700.dp) // Adjust the button position\r\n            .width(200.dp)  // Set the width for the button\r\n            .height(50.dp)  // Set the height for the button\r\n    ) {\r\n        Text(\"Login\")\r\n    }\r\n}\r\n\r\n\r\n@Composable\r\nfun HomeScreen(navController: NavController){\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.Center // Align content in the top center\r\n\r\n    ){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp)\r\n                .align(Alignment.TopCenter)\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .offset(y= 110.dp)\r\n        ){\r\n            AddOrderBTN(onClick = {\r\n\r\n            })\r\n        }\r\n    }\r\n}\r\n\r\n\r\n@Composable\r\nfun AdvancedScreen(navController: NavController){\r\n    Box(\r\n        modifier = Modifier\r\n            .background(Color.White)\r\n            .fillMaxSize(),\r\n        contentAlignment = Alignment.Center // Align content in the top center\r\n\r\n    ){\r\n        Image(\r\n            painter = painterResource(id = R.drawable.foodstop_header),\r\n            contentDescription = \"My Image\",\r\n            modifier = Modifier\r\n                .size(600.dp)\r\n                .offset(y = -215.dp)\r\n                .align(Alignment.TopCenter)\r\n        )\r\n        Column(\r\n            modifier = Modifier\r\n                .offset(y= 110.dp)\r\n        ){\r\n\r\n            OrderBTN(onClick = {\r\n                navController.navigate(\"order\")\r\n            })\r\n            ProductsBTN(onClick = {\r\n                navController.navigate(\"products\")\r\n            })\r\n\r\n            AnalyticsBTN(onClick = {\r\n                navController.navigate(\"analytics\")\r\n            })\r\n\r\n            CustomerBTN(onClick = {\r\n                navController.navigate(\"customer\")\r\n            })\r\n\r\n\r\n\r\n            LogoutBTN(\r\n                onClick = {\r\n                    // You can add logic here if needed, such as logging out the user\r\n                    // Example: Clear user session or show a message\r\n                    Toast.makeText(LocalContext.current, \"Logging out...\", Toast.LENGTH_SHORT).show()\r\n                },\r\n                navController = navController // Pass the NavController here\r\n            )\r\n\r\n\r\n\r\n\r\n        }\r\n\r\n    }\r\n}\r\n\r\n@Composable\r\nfun AddOrderBTN(onClick: () -> Unit){\r\n    val myButton = CustomButton(\r\n        label = \"Add Order\",\r\n        onClick = onClick,\r\n        iconId = R.drawable.order,\r\n    )\r\n    myButton.CreateButton()\r\n}\r\n\r\n\r\n\r\n@Composable\r\nfun OrderBTN(onClick: () -> Unit) {\r\n    val myButton = CustomButton(\r\n        label = \"Order\",\r\n        onClick = onClick,\r\n        iconId = R.drawable.order, // Replace with your icon\r\n    )\r\n\r\n    // Use the CreateButton function to display the button\r\n    myButton.CreateButton()\r\n}\r\n\r\n@Composable\r\nfun ProductsBTN(onClick: () -> Unit) {\r\n    val myButton = CustomButton(\r\n        label = \"Products\",\r\n        onClick = onClick,\r\n        iconId = R.drawable.inventory, // Replace with your icon\r\n    )\r\n\r\n    // Use the CreateButton function to display the button\r\n    myButton.CreateButton()\r\n}\r\n\r\n@Composable\r\nfun AnalyticsBTN(onClick: () -> Unit) {\r\n    val myButton = CustomButton(\r\n        label = \"Analytics\",\r\n        onClick = onClick,\r\n        iconId = R.drawable.delivery, // Replace with your icon\r\n    )\r\n\r\n    // Use the CreateButton function to display the button\r\n    myButton.CreateButton()\r\n}\r\n\r\n@Composable\r\nfun CustomerBTN(onClick: () -> Unit) {\r\n    val myButton = CustomButton(\r\n        label = \"Customer\",\r\n        onClick = onClick,\r\n        iconId = R.drawable.customer, // Replace with your icon\r\n    )\r\n\r\n    // Use the CreateButton function to display the button\r\n    myButton.CreateButton()\r\n}\r\n\r\n@Composable\r\nfun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {\r\n    val myButton = CustomButton(\r\n        label = \"Logout\",\r\n        onClick = {\r\n            navController.navigate(\"login\") // Navigate to login screen\r\n        },\r\n        iconId = R.drawable.logout, // Replace with your icon\r\n    )\r\n\r\n    // Use the CreateButton function to display the button\r\n    myButton.CreateButton()\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/ordertrackingapp/MainActivity.kt b/app/src/main/java/com/example/ordertrackingapp/MainActivity.kt
+--- a/app/src/main/java/com/example/ordertrackingapp/MainActivity.kt	(revision 8ecc3caa460cd864caa5ea70ebe83627613c5ffd)
++++ b/app/src/main/java/com/example/ordertrackingapp/MainActivity.kt	(date 1741190195794)
+@@ -139,13 +139,11 @@
+ fun AppNavigation() {
+     val navController = rememberNavController()
+ 
+-    NavHost(navController = navController, startDestination = "advanced") {
++    NavHost(navController = navController, startDestination = "home") {
++
+         composable("home") {
+             HomeScreen(navController = navController)
+         }
+-        composable("advanced") {
+-            AdvancedScreen(navController = navController)
+-        }
+         composable("login") {
+             LoginScreen(navController = navController) // Your Login Screen Composable
+         }
+@@ -191,6 +189,21 @@
+             }
+         }
+ 
++        composable("promo") {
++            PromoScreen(navController = navController) // Your Login Screen Composable
++        }
++
++        composable("promo_insert") {
++            PromoInsert(navController = navController) // Your Login Screen Composable
++        }
++
++        /*composable("promo_edit/{id}") {backStackEntry ->
++            val promoId = backStackEntry.arguments?.getString("id")
++            if (promoId != null) {
++                PromoEdit(navController = navController, promoId.toInt())
++            }
++        }*/
++
+         composable("select_products") {
+             SelectProducts(navController)
+         }
+@@ -309,6 +322,7 @@
+ }
+ 
+ 
++
+ @Composable
+ fun HomeScreen(navController: NavController){
+     Box(
+@@ -330,35 +344,6 @@
+             modifier = Modifier
+                 .offset(y= 110.dp)
+         ){
+-            AddOrderBTN(onClick = {
+-
+-            })
+-        }
+-    }
+-}
+-
+-
+-@Composable
+-fun AdvancedScreen(navController: NavController){
+-    Box(
+-        modifier = Modifier
+-            .background(Color.White)
+-            .fillMaxSize(),
+-        contentAlignment = Alignment.Center // Align content in the top center
+-
+-    ){
+-        Image(
+-            painter = painterResource(id = R.drawable.foodstop_header),
+-            contentDescription = "My Image",
+-            modifier = Modifier
+-                .size(600.dp)
+-                .offset(y = -215.dp)
+-                .align(Alignment.TopCenter)
+-        )
+-        Column(
+-            modifier = Modifier
+-                .offset(y= 110.dp)
+-        ){
+ 
+             OrderBTN(onClick = {
+                 navController.navigate("order")
+@@ -366,7 +351,9 @@
+             ProductsBTN(onClick = {
+                 navController.navigate("products")
+             })
+-
++            PromoBTN(onClick = {
++                navController.navigate("promo")
++            })
+             AnalyticsBTN(onClick = {
+                 navController.navigate("analytics")
+             })
+@@ -467,3 +454,15 @@
+     // Use the CreateButton function to display the button
+     myButton.CreateButton()
+ }
++
++@Composable
++fun PromoBTN(onClick: () -> Unit) {
++    val myButton = CustomButton(
++        label = "Promo",
++        onClick = onClick,
++        iconId = R.drawable.discount, // Replace with your icon
++    )
++
++    // Use the CreateButton function to display the button
++    myButton.CreateButton()
++}

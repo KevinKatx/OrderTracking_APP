@@ -9,20 +9,15 @@ class Promos {
     var DiscountPercent: Int = 0
     var DiscountFlat: Int = 0
 
-    // Returns columns
-    fun getColumns(): List<String> {
-        val properties = this::class.memberProperties.map { it.name }
-        val idColumns = properties.filter { it.endsWith("_ID") }
-        val otherColumns = properties.filterNot { it.endsWith("_ID") }
-
-        return idColumns + otherColumns // Ensures ID columns come first
+    constructor(
+        Promo_ID: Int, Type: String, DiscountPercent: Int, DiscountFlat: Int
+    ){
+        this.Promo_ID = Promo_ID
+        this.Type = Type
+        this.DiscountPercent = DiscountPercent
+        this.DiscountFlat = DiscountFlat
     }
 
-    // Gets table name by removing `_ID`
-    fun getTableName(): String {
-        return this::class.memberProperties
-            .firstOrNull { it.name.endsWith("_ID") }
-            ?.name?.removeSuffix("_ID") ?: "UnknownTable"
-    }
+    constructor()
 
 }

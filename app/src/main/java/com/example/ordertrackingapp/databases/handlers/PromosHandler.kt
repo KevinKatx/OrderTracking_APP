@@ -1,27 +1,77 @@
 package com.example.ordertrackingapp.databases.handlers
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.widget.Toast
+import com.example.ordertrackingapp.databases.DatabaseHelper
+import com.example.ordertrackingapp.databases.Tables.Products
+import com.example.ordertrackingapp.databases.Tables.Promos
 
-class PromosHandler(var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
+class PromosHandler(private val context: Context) {
 
+    private val dbHelper = DatabaseHelper(context)
 
-    override fun onCreate(db: SQLiteDatabase?) {
-        val createTable = "CREATE TABLE IF NOT EXISTS Promos (" +
-                "promo_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "type TEXT, discount_percent INTEGER, discount_flat INTEGER)"
-        db?.execSQL(createTable)
+    fun readData(promoID: Int? =null): List<Promos>{
+        val db = dbHelper.readableDatabase
+        val list = mutableListOf<Promos>()
+        val query = if (promoID != null) "SELECT * FROM Promos WHERE promo_ID = ?" else "SELECT * FROM Promos"
 
-        val insertDummyPromo = "INSERT INTO Promos (promo_ID, type, discount_percent, discount_flat) " +
-                "VALUES (4201337, 'Percentage', 10, 0)"
-        db?.execSQL(insertDummyPromo)
+        db.rawQuery(query, promoID?.let { arrayOf(it.toString()) }).use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow("promo_ID")
+            val typeIndex = cursor.getColumnIndexOrThrow("type")
+            val dcpercentIndex = cursor.getColumnIndexOrThrow("discount_percent")
+            val dcflatIndex = cursor.getColumnIndexOrThrow("discount_flat")
+
+            while (cursor.moveToNext()) {
+                list.add(
+                    Promos(
+                        cursor.getInt(idIndex),
+                        cursor.getString(typeIndex),
+                        cursor.getInt(dcpercentIndex),
+                        cursor.getInt(dcflatIndex)
+                    )
+                )
+            }
+        }
+
+        db.close()
+        return list
     }
 
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        db?.execSQL("DROP TABLE IF EXISTS Promos")
-        onCreate(db)
+    fun insertData(promo: Promos): Boolean {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("type", promo.Type)
+            put("discount_percent", promo.DiscountPercent)
+            put("discount_flat", promo.DiscountFlat)
+        }
+
+        val result = db.insert("Promos", null, values)
+        db.close()
+
+        return if (result == -1L) {
+            Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
+            false
+        } else {
+            Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
+            true
+        }
     }
 
+    fun deleteData(promoID: Int): Boolean {
+        val db = dbHelper.writableDatabase
+        val result = db.delete("Promos", "promoID = ?", arrayOf(promoID.toString()))
+        db.close()
+
+        return if (result > 0) {
+            Toast.makeText(context, "Delete Successful", Toast.LENGTH_SHORT).show()
+            true
+        } else {
+            Toast.makeText(context, "Delete Failed", Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
 
 }
