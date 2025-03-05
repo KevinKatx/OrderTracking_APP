@@ -364,7 +364,9 @@ fun OrderInsert(navController: NavController) {
             TextField(
                 value = customerID,
                 onValueChange = { customerID = it },
-                label = { Text("Customer ID") })
+                label = { Text("Customer ID") }
+
+            )
 
             Button(
                 onClick = {
@@ -376,7 +378,8 @@ fun OrderInsert(navController: NavController) {
                     navController.navigate("select_products")
                 },
                 modifier = Modifier.width(280.dp),
-                shape = RoundedCornerShape(0.dp)
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
             ) {
                 Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
             }
@@ -385,11 +388,20 @@ fun OrderInsert(navController: NavController) {
                 value = totalPrice.toString(),
                 onValueChange = {totalPrice = it.toInt()},
                 readOnly = true,
-                label = { Text("Total Price") })
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+                label = { Text("Total Price") }
+            )
 
             TextField(
                 value = promoID,
                 onValueChange = { promoID = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
                 label = { Text("Promo ID") })
 
             ExposedDropdownMenuBox(
@@ -400,7 +412,11 @@ fun OrderInsert(navController: NavController) {
                     readOnly = true,
                     label = { Text("Status") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStat) },
-                    modifier = Modifier.menuAnchor()
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
                 )
                 ExposedDropdownMenu(
                     expanded = expandedStat,
@@ -417,6 +433,10 @@ fun OrderInsert(navController: NavController) {
             TextField(
                 value = orderDate,
                 onValueChange = { orderDate = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
                 label = { Text("Order Date") })
 
             ExposedDropdownMenuBox(
@@ -427,7 +447,11 @@ fun OrderInsert(navController: NavController) {
                     readOnly = true,
                     label = { Text("Payment Method") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPay) },
-                    modifier = Modifier.menuAnchor()
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    )
                 )
                 ExposedDropdownMenu(
                     expanded = expandedPay,
@@ -475,7 +499,10 @@ fun OrderInsert(navController: NavController) {
                     }
 
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
                     Text("Insert")
                 }
 
@@ -485,7 +512,10 @@ fun OrderInsert(navController: NavController) {
                         navController.popBackStack()
                     }
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Back")
                 }
             }
