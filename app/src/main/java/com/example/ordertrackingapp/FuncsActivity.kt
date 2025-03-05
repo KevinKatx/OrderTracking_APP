@@ -119,12 +119,17 @@ fun OrderScreen(navController: NavController) {
 
             // Rest of the existing code remains the same
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { navController.navigate("order_insert") }) {
+                Button(onClick = { navController.navigate("order_insert") },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Insert")
                 }
 
                 Button(
                     onClick = { selectedOrder?.let { navController.navigate("order_edit/${it.orderID}") } },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
                     enabled = selectedOrder != null
                 ) {
                     Text("Edit")
@@ -138,7 +143,9 @@ fun OrderScreen(navController: NavController) {
                             orders.value = orderHandler.readData()
                         }
                     },
-                    enabled = selectedOrder != null
+                    enabled = selectedOrder != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
                     Text("Delete")
                 }
@@ -156,7 +163,11 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val orderHandler = OrderHandler(context)
     val orderDetailHandler = OrderDetailsHandler(context)
     val productHandler = remember { ProductsHandler(context) }
+    val customerHandler = CustomerHandler(context)
     val gson = Gson()
+
+    val customers = remember { customerHandler.readData() }
+    var expandedCustomer by remember { mutableStateOf(false) }
 
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
@@ -244,10 +255,46 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TextField(
-                value = customerID,
-                onValueChange = { customerID = it },
-                label = { Text("Customer ID") })
+
+            ExposedDropdownMenuBox(
+                expanded = expandedCustomer,
+                onExpandedChange = { expandedCustomer = it }
+            ) {
+                TextField(
+                    value = if (customerID.isNotBlank()) {
+                        customers.find { it.Customer_ID.toString() == customerID }?.Name ?: ""
+                    } else "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Customer") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCustomer)
+                    },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCustomer,
+                    onDismissRequest = { expandedCustomer = false }
+                ) {
+                    customers.forEach { customer ->
+                        DropdownMenuItem(
+                            text = { Text("${customer.Customer_ID}: ${customer.Name}") },
+                            onClick = {
+                                customerID = customer.Customer_ID.toString()
+                                expandedCustomer = false
+                            }
+                        )
+                    }
+                }
+            }
+
+
+
+
 
             Button(
                 onClick = {
@@ -257,7 +304,9 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                         ?.set("selected_products", jsonProducts)
                     navController.navigate("select_products")
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.width(280.dp),
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
             ) {
                 Text(if (selectedProducts.isEmpty()) "Products: None Selected" else "Products: ${selectedProducts.size} Selected")
             }
@@ -266,6 +315,10 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 value = totalPrice,
                 onValueChange = { totalPrice = it },
                 readOnly = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
                 label = { Text("Total Price") })
 
             TextField(
@@ -369,11 +422,16 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                     }
 
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
                     Text("OK")
                 }
 
-                Button(onClick = { navController.popBackStack() }) {
+                Button(onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Back")
                 }
             }
@@ -388,6 +446,13 @@ fun OrderInsert(navController: NavController) {
     val context = LocalContext.current
     val orderHandler = OrderHandler(context)
     val orderDetailHandler = OrderDetailsHandler(context)
+    val customerHandler = CustomerHandler(context)
+    val promosHandler = PromosHandler(context)
+
+    val customers = remember { customerHandler.readData() }
+    var expandedCustomer by remember { mutableStateOf(false) }
+
+
 
     var tempOrderID by remember { mutableStateOf(orderHandler.getLatestOrderID()) }
     var orderID by remember { mutableStateOf("") }
@@ -399,7 +464,7 @@ fun OrderInsert(navController: NavController) {
     var paymentType by rememberSaveable { mutableStateOf("") }
     var expandedStat by rememberSaveable { mutableStateOf(false) }
     val statuses = listOf("Pending", "Completed", "Cancelled")
-    val paymentMethods = listOf("Cash On Delivery", "GCash", "CreditCard")
+    val paymentMethods = listOf("Cash On Delivery", "GCash", "Credit Card")
     var expandedPay by rememberSaveable { mutableStateOf(false) }
 
     var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair
@@ -462,12 +527,41 @@ fun OrderInsert(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TextField(
-                value = customerID,
-                onValueChange = { customerID = it },
-                label = { Text("Customer ID") }
-
-            )
+            ExposedDropdownMenuBox(
+                expanded = expandedCustomer,
+                onExpandedChange = { expandedCustomer = it }
+            ) {
+                TextField(
+                    value = if (customerID.isNotBlank()) {
+                        customers.find { it.Customer_ID.toString() == customerID }?.Name ?: ""
+                    } else "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Customer") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCustomer)
+                    },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCustomer,
+                    onDismissRequest = { expandedCustomer = false }
+                ) {
+                    customers.forEach { customer ->
+                        DropdownMenuItem(
+                            text = { Text("${customer.Customer_ID}: ${customer.Name}") },
+                            onClick = {
+                                customerID = customer.Customer_ID.toString()
+                                expandedCustomer = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Button(
                 onClick = {
