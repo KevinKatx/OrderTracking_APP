@@ -195,6 +195,20 @@ fun AppNavigation() {
             SelectProducts(navController)
         }
 
+        composable("promo") {
+            PromoScreen(navController = navController) // Your Login Screen Composable
+        }
+
+        composable("promo_insert") {
+            PromoInsert(navController = navController) // Your Login Screen Composable
+        }
+
+        /*composable("promo_edit/{id}") {backStackEntry ->
+            val promoId = backStackEntry.arguments?.getString("id")
+            if (promoId != null) {
+                PromoEdit(navController = navController, promoId.toInt())
+            }
+        }*/
     }
 }
 
@@ -330,13 +344,42 @@ fun HomeScreen(navController: NavController){
             modifier = Modifier
                 .offset(y= 110.dp)
         ){
-            AddOrderBTN(onClick = {
 
+            OrderBTN(onClick = {
+                navController.navigate("order")
             })
+            ProductsBTN(onClick = {
+                navController.navigate("products")
+            })
+            PromoBTN(onClick = {
+                navController.navigate("promo")
+            })
+            AnalyticsBTN(onClick = {
+                navController.navigate("analytics")
+            })
+
+            CustomerBTN(onClick = {
+                navController.navigate("customer")
+            })
+
+
+
+            LogoutBTN(
+                onClick = {
+                    // You can add logic here if needed, such as logging out the user
+                    // Example: Clear user session or show a message
+                    Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
+                },
+                navController = navController // Pass the NavController here
+            )
+
+
+
+
         }
+
     }
 }
-
 
 @Composable
 fun AdvancedScreen(navController: NavController){
@@ -462,6 +505,18 @@ fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
             navController.navigate("login") // Navigate to login screen
         },
         iconId = R.drawable.logout, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun PromoBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Promo",
+        onClick = onClick,
+        iconId = R.drawable.discount, // Replace with your icon
     )
 
     // Use the CreateButton function to display the button

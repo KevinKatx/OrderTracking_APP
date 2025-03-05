@@ -4,6 +4,7 @@ package com.example.ordertrackingapp
 
 import android.os.Build
 import android.util.Log
+import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -783,13 +784,18 @@ fun SeeMenu(navController: NavController) {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { navController.navigate("product_insert") }) {
+                Button(onClick = { navController.navigate("product_insert") },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)))
+                {
                     Text("Insert")
                 }
 
                 Button(
                     onClick = { selectedProduct?.let { navController.navigate("product_edit/${it.Product_ID}") } },
-                    enabled = selectedProduct != null
+                    enabled = selectedProduct != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
                     Text("Edit")
                 }
@@ -799,7 +805,9 @@ fun SeeMenu(navController: NavController) {
                         selectedProduct?.let { productHandler.deleteData(it.Product_ID) }
                         products.value = productHandler.readData()
                     },
-                    enabled = selectedProduct != null
+                    enabled = selectedProduct != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
                     Text("Delete")
                 }
@@ -853,11 +861,17 @@ fun ProductInsert(navController: NavController){
                         )
                     productHandler.insertData(newProduct)
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Insert")
                 }
 
-                Button(onClick = { navController.popBackStack() }) {
+                Button(onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Back")
                 }
             }
@@ -917,36 +931,23 @@ fun ProductEdit(navController: NavController, productID: Int? = null) {
                         productHandler.insertData(updatedProduct)
                     }
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("OK")
                 }
 
-                Button(onClick = { navController.popBackStack() }) {
+                Button(onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Back")
                 }
 
 
             }
         }
-    }
-}
-
-@Composable
-fun InventoryScreen(navController: NavHostController) {
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.TopCenter // Align content in the top center
-
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp) // Adjust the image position
-        )
     }
 }
 
@@ -1018,13 +1019,18 @@ fun CustomerScreen(navController: NavHostController) {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { navController.navigate("customer_insert") }) {
+                Button(onClick = { navController.navigate("customer_insert") },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Insert")
                 }
 
                 Button(
                     onClick = { selectedCustomer?.let { navController.navigate("customer_edit/${it.Customer_ID}") } },
-                    enabled = selectedCustomer != null
+                    enabled = selectedCustomer != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
                     Text("Edit")
                 }
@@ -1034,7 +1040,9 @@ fun CustomerScreen(navController: NavHostController) {
                         selectedCustomer?.let { customerHandler.deleteData(it.Customer_ID)}
                         customers.value = customerHandler.readData()
                     },
-                    enabled = selectedCustomer != null
+                    enabled = selectedCustomer != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
                     Text("Delete")
                 }
@@ -1114,11 +1122,17 @@ fun CustomerInsert(navController: NavController) {
                     )
                     customerHandler.insertData(newCustomer)
                     navController.popBackStack()
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Insert")
                 }
 
-                Button(onClick = { navController.popBackStack() }) {
+                Button(onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
                     Text("Back")
                 }
             }
@@ -1189,7 +1203,10 @@ fun CustomerEdit(navController: NavController, customerID: Int? = null){
                 Text("OK")
             }
 
-            Button(onClick = { navController.popBackStack() }) {
+            Button(onClick = { navController.popBackStack() },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
                 Text("Back")
             }
         }
@@ -1316,7 +1333,9 @@ fun SelectProducts(navController: NavController) {
                         ?.savedStateHandle
                         ?.set("selected_products", gson.toJson(selectedProducts))
                     navController.popBackStack()
-                }
+                },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
             ) {
                 Text("Ok")
             }
@@ -1346,7 +1365,10 @@ fun SelectProducts(navController: NavController) {
                         }
                         showDialog = false
                     }
-                }) {
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
                     Text("Ok")
                 }
             },
@@ -1356,5 +1378,194 @@ fun SelectProducts(navController: NavController) {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun PromoScreen(navController: NavController){
+    val context = LocalContext.current
+    val promoHandler = remember { PromosHandler(context) }
+    val promos = remember { mutableStateOf(promoHandler.readData()) }
+    var selectedPromo by remember { mutableStateOf<Promos?>(null) }
+
+    Box(modifier = Modifier
+        .background(Color.White)
+        .fillMaxSize()){
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)  // ✅ Allows LazyColumn to scroll
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                ) {
+                    items(promos.value, key = { it.Promo_ID }) { promo ->
+                        val isSelected = selectedPromo?.Promo_ID == promo.Promo_ID
+
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clickable {
+                                    Log.d("DB_QUERY", "Retrieved Order ID: ${promo.Promo_ID}")
+                                    selectedPromo = promo
+                                },
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Color.Gray else Color.White
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Promo ID: ${promo.Promo_ID}")
+                                Text("Type: ${promo.Type}")
+                                Text("Discount Percent: ${promo.DiscountPercent}%")
+                                Text("Discount Flat: ${promo.DiscountFlat}")
+
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Rest of the existing code remains the same
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Button(onClick = { navController.navigate("promo_insert") }) {
+                    Text("Insert")
+                }
+
+                Button(
+                    onClick = { selectedPromo?.let { navController.navigate("promo_edit/${it.Promo_ID}") } },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
+                    enabled = selectedPromo != null
+                ) {
+                    Text("Edit")
+                }
+                Button(
+                    onClick = {
+                        selectedPromo?.let {
+                            promoHandler.deleteData(it.Promo_ID)
+                            promos.value = promoHandler.readData()
+                        }
+                    },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
+                    enabled = selectedPromo != null
+                ) {
+                    Text("Delete")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PromoInsert(navController: NavController){
+    val context = LocalContext.current
+    val promoHandler = PromosHandler(context)
+
+    var promoID by remember { mutableStateOf("")}
+    var type by remember { mutableStateOf("")}
+    var discountPercent by remember { mutableStateOf("")}
+    var discountFlat by remember { mutableStateOf("")}
+
+    Box(modifier = Modifier
+        .background(Color.White)
+        .fillMaxSize()){
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = 300.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Add a Promo",
+                fontSize = 30.sp
+            )
+            TextField(
+                value = type,
+                onValueChange = { type = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+
+                label = { Text("Type") })
+            TextField(
+                value = discountPercent,
+                onValueChange = { discountPercent = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+
+                label = { Text("Discount Percent") })
+
+            TextField(
+                value = discountFlat,
+                onValueChange = { discountFlat = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+
+                label = { Text("Discount Flat") })
+
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    val newPromo = Promos(
+                        promoID.toIntOrNull() ?: 0,
+                        type,
+                        discountPercent.toIntOrNull() ?: 0,
+                        discountFlat.toIntOrNull() ?: 0
+
+                    )
+                    promoHandler.insertData(newPromo)
+                    navController.popBackStack()
+                },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Text("Insert")
+                }
+
+                Button(
+                    onClick = {
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
+                    Text("Back")
+                }
+            }
+        }
     }
 }
