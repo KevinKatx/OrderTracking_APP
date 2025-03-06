@@ -139,7 +139,7 @@ class CustomButton(
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "advanced") {
+    NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             HomeScreen(navController = navController)
         }
@@ -409,6 +409,8 @@ fun AdvancedScreen(navController: NavController){
             ProductsBTN(onClick = {
                 navController.navigate("products")
             })
+
+
 
             AnalyticsBTN(onClick = {
                 navController.navigate("analytics")

@@ -1447,7 +1447,10 @@ fun PromoScreen(navController: NavController){
 
             // Rest of the existing code remains the same
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { navController.navigate("promo_insert") }) {
+                Button(onClick = { navController.navigate("promo_insert") },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                    ) {
                     Text("Insert")
                 }
 
@@ -1486,6 +1489,10 @@ fun PromoInsert(navController: NavController){
     var type by remember { mutableStateOf("")}
     var discountPercent by remember { mutableStateOf("")}
     var discountFlat by remember { mutableStateOf("")}
+    val types = listOf("Percentage", "Flat")
+    var expandedType by rememberSaveable { mutableStateOf(false) }
+    var percentField by rememberSaveable { mutableStateOf(false)}
+    var percentFlat by rememberSaveable { mutableStateOf(false)}
 
     Box(modifier = Modifier
         .background(Color.White)
@@ -1509,15 +1516,32 @@ fun PromoInsert(navController: NavController){
                 text = "Add a Promo",
                 fontSize = 30.sp
             )
-            TextField(
-                value = type,
-                onValueChange = { type = it },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFFA500),
-                    unfocusedLabelColor = Color(0xFFA26D00)
-                ),
 
-                label = { Text("Type") })
+            ExposedDropdownMenuBox(
+                expanded = expandedType,
+                onExpandedChange = { expandedType = it }) {
+                TextField(value = type,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Type") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedType,
+                    onDismissRequest = { expandedType = false }) {
+                    types.forEach { option ->
+                        DropdownMenuItem(text = { Text(option) }, onClick = {
+                            type = option
+                            expandedType = false
+                        })
+                    }
+                }
+            }
             TextField(
                 value = discountPercent,
                 onValueChange = { discountPercent = it },
