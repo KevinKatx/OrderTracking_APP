@@ -1492,7 +1492,7 @@ fun PromoInsert(navController: NavController){
     val types = listOf("Percentage", "Flat")
     var expandedType by rememberSaveable { mutableStateOf(false) }
     var percentField by rememberSaveable { mutableStateOf(false)}
-    var percentFlat by rememberSaveable { mutableStateOf(false)}
+    var flatField by rememberSaveable { mutableStateOf(false)}
 
     Box(modifier = Modifier
         .background(Color.White)
@@ -1538,29 +1538,42 @@ fun PromoInsert(navController: NavController){
                         DropdownMenuItem(text = { Text(option) }, onClick = {
                             type = option
                             expandedType = false
+                            if(option=="Flat") {
+                                flatField = true
+                                percentField = false
+                            }
+                            else if (option=="Percentage"){
+                                flatField=false
+                                percentField=true
+                            }
+
                         })
                     }
                 }
             }
-            TextField(
-                value = discountPercent,
-                onValueChange = { discountPercent = it },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFFA500),
-                    unfocusedLabelColor = Color(0xFFA26D00)
-                ),
+            if(percentField){
+                TextField(
+                    value = discountPercent,
+                    onValueChange = { discountPercent = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
 
-                label = { Text("Discount Percent") })
+                    label = { Text("Discount Percent") })
+            }
 
-            TextField(
-                value = discountFlat,
-                onValueChange = { discountFlat = it },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFFA500),
-                    unfocusedLabelColor = Color(0xFFA26D00)
-                ),
+            if(flatField){
+                TextField(
+                    value = discountFlat,
+                    onValueChange = { discountFlat = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
 
-                label = { Text("Discount Flat") })
+                    label = { Text("Discount Flat") })
+            }
 
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
