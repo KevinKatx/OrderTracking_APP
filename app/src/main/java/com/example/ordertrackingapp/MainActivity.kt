@@ -203,7 +203,18 @@ fun AppNavigation() {
             PromoInsert(navController = navController) // Your Login Screen Composable
         }
 
-        /*composable("promo_edit/{id}") {backStackEntry ->
+        composable("promo_edit/{id}") { backStackEntry ->
+            val promoIdString = backStackEntry.arguments?.getString("id")
+            val promoId = promoIdString?.toIntOrNull()
+            if(promoId != null) {
+                PromoEdit(navController = navController, promoID = promoId)
+            }
+        }
+        composable("select_promos") {
+            SeePromo(navController=navController)
+        }
+        /*
+        composable("promo_edit/{id}") {backStackEntry ->
             val promoId = backStackEntry.arguments?.getString("id")
             if (promoId != null) {
                 PromoEdit(navController = navController, promoId.toInt())

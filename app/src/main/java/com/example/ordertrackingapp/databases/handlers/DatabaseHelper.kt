@@ -34,7 +34,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
 
         db?.execSQL(
             "CREATE TABLE IF NOT EXISTS Promos (" +
-                    "promo_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "promo_ID INTEGER PRIMARY KEY AUTOINCREMENT, " + "name TEXT, " +
                     "type TEXT, discount_percent INTEGER, discount_flat INTEGER)"
         )
 

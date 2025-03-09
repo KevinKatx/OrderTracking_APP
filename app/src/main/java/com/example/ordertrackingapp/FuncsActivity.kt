@@ -165,6 +165,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val orderDetailHandler = OrderDetailsHandler(context)
     val productHandler = remember { ProductsHandler(context) }
     val customerHandler = CustomerHandler(context)
+    val promoHandler = remember { PromosHandler(context) }
     val gson = Gson()
 
     val customers = remember { customerHandler.readData() }
@@ -174,7 +175,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
 
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
     var totalPrice by remember { mutableStateOf(0) }
-    var promoID by remember { mutableStateOf(order.value?.promoID?.toString() ?: "") }
+    var selectedPromo by remember { mutableStateOf<Promos?>(null) }
     var status by remember { mutableStateOf(order.value?.status ?: "") }
     var orderDate by remember { mutableStateOf(order.value?.orderDate?.toString() ?: LocalDate.now().toString()) }
     var paymentType by remember { mutableStateOf(order.value?.paymentType ?: "") }
@@ -183,8 +184,30 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val paymentMethods = listOf("Cash On Delivery", "GCash", "Credit Card")
     var expandedPay by remember { mutableStateOf(false)}
 
+    // Calculate updated price after promo is applied
+    var updatedPrice by remember { mutableStateOf(totalPrice) }
+
     // Manage selected products
     var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) }
+
+    fun calculateUpdatedPrice2() {
+        updatedPrice = selectedPromo?.let { promo ->
+            var discountedPrice = totalPrice
+
+            // Apply percentage discount
+            if (promo.DiscountPercent > 0) {
+                discountedPrice = (totalPrice * (1 - promo.DiscountPercent / 100.0)).toInt()
+            }
+
+            // Apply flat discount
+            if (promo.DiscountFlat > 0) {
+                discountedPrice -= promo.DiscountFlat
+                if (discountedPrice < 0) discountedPrice = 0
+            }
+
+            discountedPrice
+        } ?: totalPrice
+    }
 
     // Load existing order details when editing
     LaunchedEffect(orderID) {
@@ -201,6 +224,14 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
             // Recalculate total price based on selected products
             totalPrice = selectedProducts.sumOf { (product, quantity) ->
                 product.Price * quantity
+            }
+
+            // Load promo data if exists
+            order.value?.promoID?.let { promoId ->
+                if (promoId > 0) {
+                    selectedPromo = promoHandler.readData().find { it.Promo_ID == promoId }
+                    calculateUpdatedPrice2()
+                }
             }
         }
     }
@@ -243,11 +274,42 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 totalPrice = selectedProducts.sumOf { (product, quantity) ->
                     product.Price * quantity
                 }
+                calculateUpdatedPrice2()
 
                 selectedProducts.forEach { (product, qty) ->
                     Log.d("DEBUG", "Final Product List -> ID: ${product.Product_ID}, Name: ${product.Product_name}, Qty: $qty")
                 }
             }
+
+        // Handle promo selection
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<String>("selected_promo")
+            ?.let { json ->
+                Log.d("DEBUG", "Selected Promo JSON: $json")
+                selectedPromo = gson.fromJson(json, Promos::class.java)
+                calculateUpdatedPrice2()
+            }
+    }
+
+    // Function to calculate price after promo is applied
+    fun calculateUpdatedPrice() {
+        updatedPrice = selectedPromo?.let { promo ->
+            var discountedPrice = totalPrice
+
+            // Apply percentage discount
+            if (promo.DiscountPercent > 0) {
+                discountedPrice = (totalPrice * (1 - promo.DiscountPercent / 100.0)).toInt()
+            }
+
+            // Apply flat discount
+            if (promo.DiscountFlat > 0) {
+                discountedPrice -= promo.DiscountFlat
+                if (discountedPrice < 0) discountedPrice = 0
+            }
+
+            discountedPrice
+        } ?: totalPrice
     }
 
     Box(modifier = Modifier
@@ -304,10 +366,6 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 }
             }
 
-
-
-
-
             Button(
                 onClick = {
                     val jsonProducts = gson.toJson(selectedProducts)
@@ -333,10 +391,27 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 ),
                 label = { Text("Total Price") })
 
+            Button(
+                onClick = {
+                    navController.navigate("select_promos")
+                },
+                modifier = Modifier.width(280.dp),
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
+                Text(selectedPromo?.Name ?: "Select Promo")
+            }
+
             TextField(
-                value = promoID,
-                onValueChange = { promoID = it },
-                label = { Text("Promo ID") })
+                value = updatedPrice.toString(),
+                onValueChange = {},
+                readOnly = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+                label = { Text("Updated Price") }
+            )
 
             ExposedDropdownMenuBox(expanded = expandedStat, onExpandedChange = { expandedStat = it }
             ) {
@@ -398,8 +473,8 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                     val updatedOrder = Order(
                         order.value?.orderID ?: 0,
                         customerID.toIntOrNull() ?: 0,
-                        totalPrice,
-                        promoID.toIntOrNull() ?: 0,
+                        updatedPrice, // Use the updated price after promo
+                        selectedPromo?.Promo_ID ?: 0,
                         status,
                         LocalDate.parse(orderDate),
                         paymentType
@@ -442,7 +517,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 Button(onClick = { navController.popBackStack() },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
-                    ) {
+                ) {
                     Text("Back")
                 }
             }
@@ -463,13 +538,11 @@ fun OrderInsert(navController: NavController) {
     val customers = remember { customerHandler.readData() }
     var expandedCustomer by remember { mutableStateOf(false) }
 
-
-
     var tempOrderID by remember { mutableStateOf(orderHandler.getLatestOrderID()) }
     var orderID by remember { mutableStateOf("") }
     var customerID by rememberSaveable { mutableStateOf("") }
     var totalPrice by remember { mutableStateOf(0) }
-    var promoID by rememberSaveable { mutableStateOf("") }
+    var selectedPromo by remember { mutableStateOf<Promos?>(null) }
     var status by rememberSaveable { mutableStateOf("") }
     var orderDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var paymentType by rememberSaveable { mutableStateOf("") }
@@ -478,7 +551,30 @@ fun OrderInsert(navController: NavController) {
     val paymentMethods = listOf("Cash On Delivery", "GCash", "Credit Card")
     var expandedPay by rememberSaveable { mutableStateOf(false) }
 
+    // Calculate updated price after promo is applied
+    var updatedPrice by remember { mutableStateOf(totalPrice) }
+
     var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair
+
+    // Function to calculate price after promo is applied
+    fun calculateUpdatedPrice() {
+        updatedPrice = selectedPromo?.let { promo ->
+            var discountedPrice = totalPrice
+
+            // Apply percentage discount
+            if (promo.DiscountPercent > 0) {
+                discountedPrice = (totalPrice * (1 - promo.DiscountPercent / 100.0)).toInt()
+            }
+
+            // Apply flat discount
+            if (promo.DiscountFlat > 0) {
+                discountedPrice -= promo.DiscountFlat
+                if (discountedPrice < 0) discountedPrice = 0
+            }
+
+            discountedPrice
+        } ?: totalPrice
+    }
 
     // Calculate total price automatically when products are received
     LaunchedEffect(navController.currentBackStackEntry) {
@@ -518,10 +614,21 @@ fun OrderInsert(navController: NavController) {
                 totalPrice = selectedProducts.sumOf { (product, quantity) ->
                     product.Price * quantity
                 }
+                calculateUpdatedPrice()
 
                 selectedProducts.forEach { (product, qty) ->
                     Log.d("DEBUG", "Final Product List -> ID: ${product.Product_ID}, Name: ${product.Product_name}, Qty: $qty")
                 }
+            }
+
+        // Handle promo selection
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.get<String>("selected_promo")
+            ?.let { json ->
+                Log.d("DEBUG", "Selected Promo JSON: $json")
+                selectedPromo = gson.fromJson(json, Promos::class.java)
+                calculateUpdatedPrice()
             }
     }
 
@@ -605,14 +712,27 @@ fun OrderInsert(navController: NavController) {
                 label = { Text("Total Price") }
             )
 
+            Button(
+                onClick = {
+                    navController.navigate("select_promos")
+                },
+                modifier = Modifier.width(280.dp),
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
+                Text(selectedPromo?.Name ?: "Select Promo")
+            }
+
             TextField(
-                value = promoID,
-                onValueChange = { promoID = it },
+                value = updatedPrice.toString(),
+                onValueChange = {},
+                readOnly = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFFFA500),
                     unfocusedLabelColor = Color(0xFFA26D00)
                 ),
-                label = { Text("Promo ID") })
+                label = { Text("Updated Price") }
+            )
 
             ExposedDropdownMenuBox(
                 expanded = expandedStat,
@@ -681,8 +801,8 @@ fun OrderInsert(navController: NavController) {
                     val newOrder = Order(
                         orderID.toIntOrNull() ?: 0,
                         customerID.toIntOrNull() ?: 0,
-                        totalPrice,
-                        promoID.toIntOrNull() ?: 0,
+                        updatedPrice, // Use the updated price after promo
+                        selectedPromo?.Promo_ID ?: 0,
                         status,
                         LocalDate.parse(orderDate),
                         paymentType
@@ -699,8 +819,6 @@ fun OrderInsert(navController: NavController) {
                     }
 
                     // Then, insert order details for each selected product
-
-
                     selectedProducts.forEach { (product, quantity) ->
                         val orderDetail = OrderDetails(
                             orderID = insertedOrderId,
@@ -727,7 +845,7 @@ fun OrderInsert(navController: NavController) {
                 },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
-                    ) {
+                ) {
                     Text("Back")
                 }
             }
@@ -1420,7 +1538,9 @@ fun SelectProducts(navController: NavController) {
                 }
             },
             dismissButton = {
-                Button(onClick = { showDialog = false }) {
+                Button(onClick = { showDialog = false },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
                     Text("Cancel")
                 }
             }
@@ -1482,6 +1602,7 @@ fun PromoScreen(navController: NavController){
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text("Promo ID: ${promo.Promo_ID}")
+                                Text("Promo Name: ${promo.Name}")
                                 Text("Type: ${promo.Type}")
                                 Text("Discount Percent: ${promo.DiscountPercent}%")
                                 Text("Discount Flat: ${promo.DiscountFlat}")
@@ -1533,6 +1654,7 @@ fun PromoInsert(navController: NavController){
     val promoHandler = PromosHandler(context)
 
     var promoID by remember { mutableStateOf("")}
+    var name by remember { mutableStateOf("")}
     var type by remember { mutableStateOf("")}
     var discountPercent by remember { mutableStateOf("")}
     var discountFlat by remember { mutableStateOf("")}
@@ -1559,16 +1681,26 @@ fun PromoInsert(navController: NavController){
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Text(
                 text = "Add a Promo",
                 fontSize = 30.sp
             )
+            TextField(
+                value = name,
+                onValueChange = { name = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+
+                label = { Text("Promo Name") })
 
             ExposedDropdownMenuBox(
                 expanded = expandedType,
                 onExpandedChange = { expandedType = it }) {
                 TextField(value = type,
-                    onValueChange = {},
+                    onValueChange = {type = it},
                     readOnly = true,
                     label = { Text("Type") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
@@ -1627,6 +1759,7 @@ fun PromoInsert(navController: NavController){
                 Button(onClick = {
                     val newPromo = Promos(
                         promoID.toIntOrNull() ?: 0,
+                        name,
                         type,
                         discountPercent.toIntOrNull() ?: 0,
                         discountFlat.toIntOrNull() ?: 0
@@ -1653,3 +1786,237 @@ fun PromoInsert(navController: NavController){
         }
     }
 }
+
+@Composable
+fun PromoEdit(navController: NavController, promoID: Int? = null) {
+    val context = LocalContext.current
+    val promosHandler = PromosHandler(context)
+    val promo = remember { mutableStateOf(promoID?.let { promosHandler.readData(it).firstOrNull() }) }
+
+    var name by remember { mutableStateOf(promo.value?.Name ?: "") }
+    var type by remember { mutableStateOf(promo.value?.Type ?: "") }
+    var discountPercent by remember { mutableStateOf(promo.value?.DiscountPercent?.toString() ?: "") }
+    var discountFlat by remember { mutableStateOf(promo.value?.DiscountFlat?.toString() ?: "") }
+
+    val types = listOf("Percentage", "Flat")
+    var expandedType by rememberSaveable { mutableStateOf(false) }
+
+    // Initialize percentField and flatField based on the loaded promo type
+    var percentField by rememberSaveable { mutableStateOf(promo.value?.Type == "Percentage") }
+    var flatField by rememberSaveable { mutableStateOf(promo.value?.Type == "Flat") }
+
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "My Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp) // Adjust the image position
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = 300.dp) // Match the offset from PromoInsert
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Edit Promo",
+                fontSize = 30.sp
+            )
+
+            TextField(
+                value = name,
+                onValueChange = { name = it },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500),
+                    unfocusedLabelColor = Color(0xFFA26D00)
+                ),
+                label = { Text("Promo Name") }
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = expandedType,
+                onExpandedChange = { expandedType = it }
+            ) {
+                TextField(
+                    value = type,
+                    onValueChange = { type = it },
+                    readOnly = true,
+                    label = { Text("Type") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedType,
+                    onDismissRequest = { expandedType = false }
+                ) {
+                    types.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                type = option
+                                expandedType = false
+                                if (option == "Flat") {
+                                    flatField = true
+                                    percentField = false
+                                } else if (option == "Percentage") {
+                                    flatField = false
+                                    percentField = true
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (percentField) {
+                TextField(
+                    value = discountPercent,
+                    onValueChange = { discountPercent = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
+                    label = { Text("Discount Percent") }
+                )
+            }
+
+            if (flatField) {
+                TextField(
+                    value = discountFlat,
+                    onValueChange = { discountFlat = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    ),
+                    label = { Text("Discount Flat") }
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val updatedPromo = Promos(
+                            promo.value?.Promo_ID ?: 0,
+                            name,
+                            type,
+                            discountPercent.toIntOrNull() ?: 0,
+                            discountFlat.toIntOrNull() ?: 0
+                        ).apply { if (promoID != null) this.Promo_ID = promoID }
+
+                        if (promoID != null) {
+                            promosHandler.updateData(updatedPromo)
+                        } else {
+                            promosHandler.insertData(updatedPromo)
+                        }
+
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Text("Update")
+                }
+
+                Button(
+                    onClick = {
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Text("Back")
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun SeePromo(navController: NavController) {
+    val context = LocalContext.current
+    val promoHandler = remember { PromosHandler(context) }
+    val promos = remember { mutableStateOf(promoHandler.readData()) }
+    val gson = Gson()
+
+    var selectedPromo by remember { mutableStateOf<Promos?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Select Promo",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(promos.value, key = { it.Promo_ID }) { promo ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .clickable {
+                            selectedPromo = promo
+                            // Pass back the selected promo to the previous screen
+                            navController.previousBackStackEntry?.savedStateHandle?.set(
+                                "selected_promo",
+                                gson.toJson(promo)
+                            )
+                            navController.popBackStack()
+                        },
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Promo ID: ${promo.Promo_ID}")
+                            Text("Name: ${promo.Name}")
+                            Text("Type: ${promo.Type}")
+                            Text("Discount %: ${promo.DiscountPercent}")
+                            Text("Discount Flat: ${promo.DiscountFlat}")
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { navController.popBackStack() },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
+                Text("Cancel")
+            }
+        }
+    }
+}
+

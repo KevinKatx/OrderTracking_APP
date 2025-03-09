@@ -20,6 +20,7 @@ class PromosHandler(private val context: Context) {
 
         db.rawQuery(query, promoID?.let { arrayOf(it.toString()) }).use { cursor ->
             val idIndex = cursor.getColumnIndexOrThrow("promo_ID")
+            val nameIndex = cursor.getColumnIndexOrThrow("name")
             val typeIndex = cursor.getColumnIndexOrThrow("type")
             val dcpercentIndex = cursor.getColumnIndexOrThrow("discount_percent")
             val dcflatIndex = cursor.getColumnIndexOrThrow("discount_flat")
@@ -28,6 +29,7 @@ class PromosHandler(private val context: Context) {
                 list.add(
                     Promos(
                         cursor.getInt(idIndex),
+                        cursor.getString(nameIndex),
                         cursor.getString(typeIndex),
                         cursor.getInt(dcpercentIndex),
                         cursor.getInt(dcflatIndex)
@@ -43,6 +45,7 @@ class PromosHandler(private val context: Context) {
     fun insertData(promo: Promos): Boolean {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
+            put("name", promo.Name)
             put("type", promo.Type)
             put("discount_percent", promo.DiscountPercent)
             put("discount_flat", promo.DiscountFlat)
@@ -62,7 +65,7 @@ class PromosHandler(private val context: Context) {
 
     fun deleteData(promoID: Int): Boolean {
         val db = dbHelper.writableDatabase
-        val result = db.delete("Promos", "promoID = ?", arrayOf(promoID.toString()))
+        val result = db.delete("Promos", "promo_ID = ?", arrayOf(promoID.toString()))
         db.close()
 
         return if (result > 0) {
@@ -74,4 +77,16 @@ class PromosHandler(private val context: Context) {
         }
     }
 
+    fun updateData(promo: Promos): Int {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("name", promo.Name)
+            put("type", promo.Type)
+            put("discount_percent", promo.DiscountPercent)
+            put("discount_flat", promo.DiscountFlat)
+        }
+        val result = db.update("Promos", values, "promo_ID = ?", arrayOf(promo.Promo_ID.toString()))
+        db.close()
+        return result
+    }
 }
