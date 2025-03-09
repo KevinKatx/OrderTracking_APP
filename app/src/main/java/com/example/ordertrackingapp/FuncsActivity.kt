@@ -173,7 +173,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
-    var totalPrice by remember { mutableStateOf(order.value?.totalPrice?.toString() ?: "") }
+    var totalPrice by remember { mutableStateOf(0) }
     var promoID by remember { mutableStateOf(order.value?.promoID?.toString() ?: "") }
     var status by remember { mutableStateOf(order.value?.status ?: "") }
     var orderDate by remember { mutableStateOf(order.value?.orderDate?.toString() ?: LocalDate.now().toString()) }
@@ -201,42 +201,53 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
             // Recalculate total price based on selected products
             totalPrice = selectedProducts.sumOf { (product, quantity) ->
                 product.Price * quantity
-            }.toString()
+            }
         }
     }
 
     // Handle product selection from navigation
     LaunchedEffect(navController.currentBackStackEntry) {
-        val receivedProducts = navController.currentBackStackEntry
+        Log.d("DEBUG", "LaunchedEffect Triggered")
+
+        val gson = Gson()
+        navController.currentBackStackEntry
             ?.savedStateHandle
             ?.get<String>("selected_products")
             ?.let { json ->
+                Log.d("DEBUG", "JSON Data: $json")
+
                 val type = object : TypeToken<List<Map<String, Any>>>() {}.type
                 val productList: List<Map<String, Any>> = gson.fromJson(json, type)
 
-                productList.map { map ->
-                    val productMap = map["first"] as? Map<String, Any> ?: emptyMap()
+                selectedProducts = productList.map { map ->
+                    val productMap = map["first"]
+                    Log.d("DEBUG", "Raw Product Map: $productMap")  // Check what's inside "first"
 
-                    val product = Products(
-                        productMap["Product_ID"] as? Int ?: 0,
-                        productMap["Product_name"] as? String ?: "",
-                        (productMap["Price"] as? Double)?.toInt() ?: 0
-                    )
+                    val product = if (productMap is Map<*, *>) {
+                        Products(
+                            productMap["Product_ID"]?.let { (it as? Double)?.toInt() } ?: -1, // Fix here
+                            productMap["Product_name"] as? String ?: "Unknown",
+                            (productMap["Price"] as? Double)?.toInt() ?: 0
+                        )
+                    } else {
+                        Log.e("ERROR", "Invalid product map structure: $productMap")
+                        Products(-1, "Invalid", 0)
+                    }
 
                     val quantity = (map["second"] as? Double)?.toInt() ?: 0
 
+                    Log.d("DEBUG", "Extracted Product ID: ${product.Product_ID}, Quantity: $quantity")
+
                     Pair(product, quantity)
                 }
-            } ?: emptyList()
+                totalPrice = selectedProducts.sumOf { (product, quantity) ->
+                    product.Price * quantity
+                }
 
-        if (receivedProducts.isNotEmpty()) {
-            selectedProducts = receivedProducts
-
-            // Recalculate total price
-            totalPrice = selectedProducts.sumOf { (product, quantity) ->
-                product.Price * quantity
-            }.toString()
-        }
+                selectedProducts.forEach { (product, qty) ->
+                    Log.d("DEBUG", "Final Product List -> ID: ${product.Product_ID}, Name: ${product.Product_name}, Qty: $qty")
+                }
+            }
     }
 
     Box(modifier = Modifier
@@ -313,8 +324,8 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
             }
 
             TextField(
-                value = totalPrice,
-                onValueChange = { totalPrice = it },
+                value = totalPrice.toString(),
+                onValueChange = {totalPrice = it.toInt()},
                 readOnly = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFFFA500),
@@ -387,7 +398,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                     val updatedOrder = Order(
                         order.value?.orderID ?: 0,
                         customerID.toIntOrNull() ?: 0,
-                        totalPrice.toFloatOrNull() ?: 0f,
+                        totalPrice,
                         promoID.toIntOrNull() ?: 0,
                         status,
                         LocalDate.parse(orderDate),
@@ -410,7 +421,6 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                     }
 
                     // Delete existing order details for this order
-                    orderDetailHandler.deleteData(insertedOrderId)
 
                     // Insert new order details
                     selectedProducts.forEach { (product, quantity) ->
@@ -419,7 +429,7 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                             productID = product.Product_ID,
                             quantity = quantity
                         )
-                        orderDetailHandler.insertData(orderDetail)
+                        orderDetailHandler.updateData(orderDetail)
                     }
 
                     navController.popBackStack()
@@ -484,30 +494,34 @@ fun OrderInsert(navController: NavController) {
                 val type = object : TypeToken<List<Map<String, Any>>>() {}.type
                 val productList: List<Map<String, Any>> = gson.fromJson(json, type)
 
-                // Clear list every time before adding new products
-                selectedProducts = emptyList()
-
                 selectedProducts = productList.map { map ->
-                    val productMap = map["first"] as? Map<String, Any> ?: emptyMap()
+                    val productMap = map["first"]
+                    Log.d("DEBUG", "Raw Product Map: $productMap")  // Check what's inside "first"
 
-                    val product = Products(
-                        productMap["Product_ID"] as? Int ?: 0,
-                        productMap["Product_name"] as? String ?: "",
-                        (productMap["Price"] as? Double)?.toInt() ?: 0
-                    )
+                    val product = if (productMap is Map<*, *>) {
+                        Products(
+                            productMap["Product_ID"]?.let { (it as? Double)?.toInt() } ?: -1, // Fix here
+                            productMap["Product_name"] as? String ?: "Unknown",
+                            (productMap["Price"] as? Double)?.toInt() ?: 0
+                        )
+                    } else {
+                        Log.e("ERROR", "Invalid product map structure: $productMap")
+                        Products(-1, "Invalid", 0)
+                    }
 
                     val quantity = (map["second"] as? Double)?.toInt() ?: 0
 
-                    Log.d("DEBUG", "Product: ${product.Product_name}, Quantity: $quantity")
+                    Log.d("DEBUG", "Extracted Product ID: ${product.Product_ID}, Quantity: $quantity")
 
                     Pair(product, quantity)
                 }
-
-                // Calculate Total Price
                 totalPrice = selectedProducts.sumOf { (product, quantity) ->
                     product.Price * quantity
                 }
-                Log.d("DEBUG", "Total Price: $totalPrice")
+
+                selectedProducts.forEach { (product, qty) ->
+                    Log.d("DEBUG", "Final Product List -> ID: ${product.Product_ID}, Name: ${product.Product_name}, Qty: $qty")
+                }
             }
     }
 
@@ -667,7 +681,7 @@ fun OrderInsert(navController: NavController) {
                     val newOrder = Order(
                         orderID.toIntOrNull() ?: 0,
                         customerID.toIntOrNull() ?: 0,
-                        totalPrice.toFloat(),
+                        totalPrice,
                         promoID.toIntOrNull() ?: 0,
                         status,
                         LocalDate.parse(orderDate),
@@ -685,6 +699,8 @@ fun OrderInsert(navController: NavController) {
                     }
 
                     // Then, insert order details for each selected product
+
+
                     selectedProducts.forEach { (product, quantity) ->
                         val orderDetail = OrderDetails(
                             orderID = insertedOrderId,
@@ -840,10 +856,12 @@ fun ProductInsert(navController: NavController){
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .offset(y = 300.dp)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("Add a Product", fontSize = 30.sp)
             TextField(
                 value = productName,
                 onValueChange = { productName = it },
@@ -1076,10 +1094,12 @@ fun CustomerInsert(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .offset(y = 300.dp)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("Add a Customer", fontSize = 30.sp)
             TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
             ExposedDropdownMenuBox(
                 expanded = expandedCusTyp,
@@ -1228,6 +1248,7 @@ fun AnalyticsScreen(navController: NavHostController) {
                 .size(600.dp)
                 .offset(y = -215.dp) // Adjust the image position
         )
+
     }
 }
 
@@ -1239,12 +1260,26 @@ fun SelectProducts(navController: NavController) {
     val products = remember { mutableStateOf(productHandler.readData()) }
     val gson = Gson()
 
-    val receivedProducts = navController.previousBackStackEntry
-        ?.savedStateHandle
-        ?.get<String>("selected_products")
-        ?.let { json ->
-            gson.fromJson(json, Array<Products>::class.java).toList()
-        } ?: emptyList()
+    val receivedProducts = remember {
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.get<String>("selected_products")
+            ?.let { json ->
+                Log.d("DEBUG", "Retrieved JSON: $json")  // Debugging
+                val type = object : TypeToken<List<Map<String, Any>>>() {}.type
+                val rawList: List<Map<String, Any>> = gson.fromJson(json, type)
+
+                rawList.mapNotNull { map ->
+                    val productMap = map["first"] as? Map<String, Any> ?: return@mapNotNull null
+                    val quantity = (map["second"] as? Double)?.toInt() ?: return@mapNotNull null
+
+                    val productJson = gson.toJson(productMap)
+                    val product = gson.fromJson(productJson, Products::class.java)
+
+                    product to quantity
+                }
+            } ?: emptyList()
+    }
 
     val selectedProducts = remember { mutableStateListOf<Pair<Products, Int>>() }
     var showDialog by remember { mutableStateOf(false) }
@@ -1252,13 +1287,14 @@ fun SelectProducts(navController: NavController) {
     var quantity by remember { mutableStateOf("") }
 
     // Add received products to the list with default quantity
-    LaunchedEffect(true) {
-        // Always clear the list every time the screen is opened
+    LaunchedEffect(Unit) {
+        Log.d("DEBUG", "Clearing selectedProducts")
         selectedProducts.clear()
-        receivedProducts.forEach {
-            selectedProducts.add(it to 1) // Add received products with default quantity
-        }
+        Log.d("DEBUG", "Received products: $receivedProducts")
+        selectedProducts.addAll(receivedProducts)
+        Log.d("DEBUG", "Updated selectedProducts: $selectedProducts")
     }
+
 
 
     Column(
@@ -1329,9 +1365,13 @@ fun SelectProducts(navController: NavController) {
 
             Button(
                 onClick = {
+                    val selectedProductsJson = gson.toJson(selectedProducts.map {
+                        mapOf("first" to it.first, "second" to it.second)
+                    })
+                    Log.d("DEBUG", "Saving selected products: $selectedProductsJson")  // Debugging
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.set("selected_products", gson.toJson(selectedProducts))
+                        ?.set("selected_products", selectedProductsJson)
                     navController.popBackStack()
                 },
                 shape = RoundedCornerShape(0.dp),
@@ -1356,16 +1396,23 @@ fun SelectProducts(navController: NavController) {
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    if (quantity.isNotBlank()) {
-                        val qty = quantity.toInt()
-                        if (qty > 0) {
-                            selectedProducts.removeIf { it.first.Product_ID == selectedProduct?.Product_ID }
-                            selectedProducts.add(selectedProduct!! to qty)
+                Button(
+                    onClick = {
+                        if (quantity.isNotBlank()) {
+                            val qty = quantity.toInt()
+                            if (qty > 0) {
+                                // If quantity is greater than 0, update the list
+                                selectedProducts.removeIf { it.first.Product_ID == selectedProduct?.Product_ID }
+                                selectedProducts.add(selectedProduct!! to qty)
+                            } else {
+                                // If quantity is 0, remove the product
+                                selectedProducts.removeIf { it.first.Product_ID == selectedProduct?.Product_ID }
+                            }
+                            showDialog = false
                         }
-                        showDialog = false
-                    }
-                },
+
+                        Log.d("DEBUG", "Updated selectedProducts: ${selectedProducts}")
+                    },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {

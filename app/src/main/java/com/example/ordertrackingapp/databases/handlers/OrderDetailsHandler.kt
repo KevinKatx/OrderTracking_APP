@@ -27,17 +27,19 @@ class OrderDetailsHandler(private val context: Context) {
         val result = db.insert("OrderDetails", null, cv)
         db.close()
 
-        Log.d("DB_INSERT", "Insert result: $result")
+        Log.d("DB_INSERT", "Insert OrderDetals result: $result")
         return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
             Log.e("DB_ERROR", "Insert failed")
             false
         } else {
-            Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
-            Log.d("DB_SUCCESS", "Insert successful with ID: $result")
+            Toast.makeText(context, "Insert OrderDetails Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_SUCCESS", "Insert OrderDetails successful with ID: $result")
             true
         }
     }
+
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun readData(orderID: Int? = null): MutableList<OrderDetails> {
@@ -46,7 +48,7 @@ class OrderDetailsHandler(private val context: Context) {
         val query = if (orderID != null) {
             "SELECT * FROM OrderDetails WHERE orderID = ?"
         } else {
-            "SELECT * FROM Orders"
+            "SELECT * FROM OrderDetails"
         }
         val result = if (orderID != null) {
             db.rawQuery(query, arrayOf(orderID.toString()))
@@ -72,6 +74,33 @@ class OrderDetailsHandler(private val context: Context) {
         db.close()
         return list
     }
+
+    fun updateData(orderDetails: OrderDetails): Boolean {
+        val db = dbHelper.writableDatabase
+        val cv = ContentValues().apply {
+            put("quantity", orderDetails.quantity)
+        }
+
+        val result = db.update(
+            "OrderDetails",
+            cv,
+            "orderID = ? AND productID = ?",
+            arrayOf(orderDetails.orderID.toString(), orderDetails.productID.toString())
+        )
+
+        db.close()
+
+        return if (result > 0) {
+            Toast.makeText(context, "Update Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_UPDATE", "Updated OrderDetails (orderID: ${orderDetails.orderID}, productID: ${orderDetails.productID}) to quantity: $${orderDetails.quantity}")
+            true
+        } else {
+            Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
+            Log.e("DB_ERROR", "Update failed for orderID: ${orderDetails.orderID}, productID: ${orderDetails.productID}")
+            false
+        }
+    }
+
 
 
 

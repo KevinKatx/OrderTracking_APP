@@ -15,6 +15,7 @@ class OrderHandler(private val context: Context) {
 
     private val dbHelper = DatabaseHelper(context)
 
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun insertData(order: Order): Boolean {
         val db = dbHelper.writableDatabase
@@ -30,14 +31,14 @@ class OrderHandler(private val context: Context) {
         val result = db.insert("Orders", null, cv)
         db.close()
 
-        Log.d("DB_INSERT", "Insert result: $result")
+        Log.d("DB_INSERT", "Insert Order result: $result")
         return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
             Log.e("DB_ERROR", "Insert failed")
             false
         } else {
-            Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
-            Log.d("DB_SUCCESS", "Insert successful with ID: $result")
+            Toast.makeText(context, "Insert Order Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_SUCCESS", "Insert Order successful with ID: $result")
             true
         }
     }
@@ -61,7 +62,7 @@ class OrderHandler(private val context: Context) {
             do {
                 val orderID = result.getInt(result.getColumnIndexOrThrow("orderID"))
                 val customerID = result.getInt(result.getColumnIndexOrThrow("customerID"))
-                val totalPrice = result.getFloat(result.getColumnIndexOrThrow("TotalPrice"))
+                val totalPrice = result.getInt(result.getColumnIndexOrThrow("TotalPrice"))
                 val promoID = result.getInt(result.getColumnIndexOrThrow("PromoID"))
                 val status = result.getString(result.getColumnIndexOrThrow("Status"))
                 val paymentType = result.getString(result.getColumnIndexOrThrow("PaymentType"))
@@ -107,14 +108,17 @@ class OrderHandler(private val context: Context) {
         val db = dbHelper.writableDatabase
         val result = db.delete("Orders", "orderID = ?", arrayOf(productID.toString()))
         db.close()
+        val result2 = db.delete("OrderDetails", "orderID = ?", arrayOf(productID.toString()))
 
-        return if (result > 0) {
-            Toast.makeText(context, "Delete Successful", Toast.LENGTH_SHORT).show()
+        return if (result > 0 && result2 > 0) {
+            Toast.makeText(context, "Delete Order and OrderDetails Successful", Toast.LENGTH_SHORT).show()
             true
         } else {
-            Toast.makeText(context, "Delete Failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Order Deletion Failed", Toast.LENGTH_SHORT).show()
             false
         }
+
+
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
