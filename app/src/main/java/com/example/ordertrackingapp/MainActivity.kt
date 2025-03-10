@@ -1,5 +1,6 @@
 package com.example.ordertrackingapp
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,6 +37,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ordertrackingapp.databases.DatabaseHelper
+
+
 
 
 class MainActivity : ComponentActivity() {
@@ -138,10 +142,10 @@ class CustomButton(
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
+    val context = LocalContext.current
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
-            HomeScreen(navController = navController)
+            HomeScreen(navController = navController, context)
         }
         composable("advanced") {
             AdvancedScreen(navController = navController)
@@ -335,7 +339,9 @@ fun SubmitBTN(onClick: () -> Unit) {
 
 
 @Composable
-fun HomeScreen(navController: NavController){
+fun HomeScreen(navController: NavController, context: Context){
+    val db = DatabaseHelper.getInstance(context).writableDatabase
+
     Box(
         modifier = Modifier
             .background(Color.White)

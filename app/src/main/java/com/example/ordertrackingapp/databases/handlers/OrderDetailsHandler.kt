@@ -15,7 +15,7 @@ class OrderDetailsHandler(private val context: Context) {
     private val dbHelper = DatabaseHelper(context)
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun insertData(orderDetails: OrderDetails): Boolean {
+    fun insertData(orderDetails: OrderDetails): Int {
         val db = dbHelper.writableDatabase
         val cv = ContentValues().apply {
             put("orderID", orderDetails.orderID)
@@ -31,11 +31,11 @@ class OrderDetailsHandler(private val context: Context) {
         return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
             Log.e("DB_ERROR", "Insert failed")
-            false
+            0
         } else {
             Toast.makeText(context, "Insert OrderDetails Successful", Toast.LENGTH_SHORT).show()
             Log.d("DB_SUCCESS", "Insert OrderDetails successful with ID: $result")
-            true
+            1
         }
     }
 
@@ -75,31 +75,36 @@ class OrderDetailsHandler(private val context: Context) {
         return list
     }
 
-    fun updateData(orderDetails: OrderDetails): Boolean {
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateData(orderDetails: OrderDetails): Int {
         val db = dbHelper.writableDatabase
-        val cv = ContentValues().apply {
-            put("quantity", orderDetails.quantity)
+
+        // First, delete existing entry
+        val deleteResult = db.delete(
+            "OrderDetails",
+            "orderID = ?",
+            arrayOf(orderDetails.orderID.toString())
+        )
+
+
+
+        // If quantity is 0, stop here (do not reinsert)
+        if (orderDetails.quantity == 0) {
+            Toast.makeText(context, "Product removed from order", Toast.LENGTH_SHORT).show()
+            db.close()
+            return deleteResult
         }
 
-        val result = db.update(
-            "OrderDetails",
-            cv,
-            "orderID = ? AND productID = ?",
-            arrayOf(orderDetails.orderID.toString(), orderDetails.productID.toString())
-        )
+        // Otherwise, insert the new order details
+        val insertResult = insertData(orderDetails)
 
         db.close()
 
-        return if (result > 0) {
-            Toast.makeText(context, "Update Successful", Toast.LENGTH_SHORT).show()
-            Log.d("DB_UPDATE", "Updated OrderDetails (orderID: ${orderDetails.orderID}, productID: ${orderDetails.productID}) to quantity: $${orderDetails.quantity}")
-            true
-        } else {
-            Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
-            Log.e("DB_ERROR", "Update failed for orderID: ${orderDetails.orderID}, productID: ${orderDetails.productID}")
-            false
-        }
+        return insertResult
     }
+
+
+
 
 
 
@@ -110,10 +115,8 @@ class OrderDetailsHandler(private val context: Context) {
         db.close()
 
         return if (result > 0) {
-            Toast.makeText(context, "Delete Successful", Toast.LENGTH_SHORT).show()
             true
         } else {
-            Toast.makeText(context, "Delete Failed", Toast.LENGTH_SHORT).show()
             false
         }
     }

@@ -40,9 +40,10 @@ android {
 }
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation(libs.mpandroidchart)
+    implementation(libs.gson)
+    implementation(libs.androidx.navigation.compose.v277)
+    implementation(libs.kotlin.reflect)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
