@@ -147,9 +147,7 @@ fun AppNavigation() {
         composable("home") {
             HomeScreen(navController = navController, context)
         }
-        composable("advanced") {
-            AdvancedScreen(navController = navController)
-        }
+
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
@@ -217,13 +215,9 @@ fun AppNavigation() {
         composable("select_promos") {
             SeePromo(navController=navController)
         }
-        /*
-        composable("promo_edit/{id}") {backStackEntry ->
-            val promoId = backStackEntry.arguments?.getString("id")
-            if (promoId != null) {
-                PromoEdit(navController = navController, promoId.toInt())
-            }
-        }*/
+
+
+
     }
 }
 
@@ -398,63 +392,7 @@ fun HomeScreen(navController: NavController, context: Context){
     }
 }
 
-@Composable
-fun AdvancedScreen(navController: NavController){
-    Box(
-        modifier = Modifier
-            .background(Color.White)
-            .fillMaxSize(),
-        contentAlignment = Alignment.Center // Align content in the top center
 
-    ){
-        Image(
-            painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
-            modifier = Modifier
-                .size(600.dp)
-                .offset(y = -215.dp)
-                .align(Alignment.TopCenter)
-        )
-        Column(
-            modifier = Modifier
-                .offset(y= 110.dp)
-        ){
-
-            OrderBTN(onClick = {
-                navController.navigate("order")
-            })
-            ProductsBTN(onClick = {
-                navController.navigate("products")
-            })
-
-
-
-            AnalyticsBTN(onClick = {
-                navController.navigate("analytics")
-            })
-
-            CustomerBTN(onClick = {
-                navController.navigate("customer")
-            })
-
-
-
-            LogoutBTN(
-                onClick = {
-                    // You can add logic here if needed, such as logging out the user
-                    // Example: Clear user session or show a message
-                    Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
-                },
-                navController = navController // Pass the NavController here
-            )
-
-
-
-
-        }
-
-    }
-}
 
 @Composable
 fun AddOrderBTN(onClick: () -> Unit){
