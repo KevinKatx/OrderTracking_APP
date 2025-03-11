@@ -79,28 +79,38 @@ class OrderDetailsHandler(private val context: Context) {
     fun updateData(orderDetails: OrderDetails): Int {
         val db = dbHelper.writableDatabase
 
-        // First, delete existing entry
-        val deleteResult = db.delete(
-            "OrderDetails",
-            "orderID = ?",
-            arrayOf(orderDetails.orderID.toString())
-        )
-
-
-
-        // If quantity is 0, stop here (do not reinsert)
         if (orderDetails.quantity == 0) {
+            // If quantity is zero, remove the specific product from the order
+            val deleteResult = db.delete(
+                "OrderDetails",
+                "orderID = ? AND productID = ?",
+                arrayOf(orderDetails.orderID.toString(), orderDetails.productID.toString())
+            )
+
             Toast.makeText(context, "Product removed from order", Toast.LENGTH_SHORT).show()
             db.close()
             return deleteResult
         }
 
-        // Otherwise, insert the new order details
-        val insertResult = insertData(orderDetails)
+        // Otherwise, update the existing order detail
+        val values = ContentValues().apply {
+            put("quantity", orderDetails.quantity) // Assuming there is a price column
+        }
+
+        val updateResult = db.update(
+            "OrderDetails",
+            values,
+            "orderID = ? AND productID = ?",
+            arrayOf(orderDetails.orderID.toString(), orderDetails.productID.toString())
+        )
+
+        // If no rows were updated, it means the product isn't in the order, so insert it
+        if (updateResult == 0) {
+            insertData(orderDetails)
+        }
 
         db.close()
-
-        return insertResult
+        return updateResult
     }
 
 

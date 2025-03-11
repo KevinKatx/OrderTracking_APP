@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -1489,11 +1490,14 @@ fun AnalyticsScreen(navController: NavHostController) {
     val dbHelper = DatabaseHelper(context)
     val analyticsHandler = AnalyticsHandler(dbHelper.readableDatabase)
 
+
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // State for selected dates
     val startDate = remember { mutableStateOf(dateFormatter.format(Date())) }
     val endDate = remember { mutableStateOf(dateFormatter.format(Date())) }
+    var topOrders by remember { mutableStateOf(emptyList<Pair<String, Int>>()) }
+    var freqBoughtTogether by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
 
     // State for showing DatePicker dialogs
     val showStartDatePicker = remember { mutableStateOf(false) }
@@ -1521,6 +1525,9 @@ fun AnalyticsScreen(navController: NavHostController) {
     // Fetch data when screen is first loaded
     LaunchedEffect(Unit) {
         fetchOrders()
+
+        topOrders = analyticsHandler.getTopOrders(startDate, endDate)
+        freqBoughtTogether = analyticsHandler.freqBoughtTogether(startDate, endDate)
     }
 
     Column(
@@ -1538,6 +1545,9 @@ fun AnalyticsScreen(navController: NavHostController) {
         ) {
             OrdersGraph(ordersData.value) // This will recompose when ordersData changes
         }
+
+        AnalyticsBottomSection(topOrders, freqBoughtTogether)
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1564,7 +1574,12 @@ fun AnalyticsScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.width(20.dp))
 
             Button(onClick = {
-                ordersData.value = emptyList()
+                topOrders = analyticsHandler.getTopOrders(startDate, endDate).also{
+                    Log.d("DEBUG", "Top Orders Updated: $it")
+                }
+                freqBoughtTogether = analyticsHandler.freqBoughtTogether(startDate, endDate).also{
+                    Log.d("DEBUG", "Frequently Bought Together Updated: $it")
+                }
                 fetchOrders()
 
             }) {
@@ -1633,39 +1648,32 @@ fun OrdersGraph(ordersCount: List<Pair<String, Int>>) {
             BarChart(ctx).apply {
                 description.isEnabled = false
                 setFitBars(true)
-
-                // Convert dates into index-based entries
-                val entries = ordersCount.mapIndexed { index, data ->
-                    Log.d("DEBUG", "Mapping Data: index=$index, date=${data.first}, count=${data.second}")
-                    BarEntry(index.toFloat(), data.second.toFloat())
-                }
-
-                if (entries.isEmpty()) {
-                    Log.d("DEBUG", "Graph Entries is empty!")
-                } else {
-                    Log.d("DEBUG", "Graph Entries: $entries")
-                }
-
-                val dataSet = BarDataSet(entries, "Orders Per Day").apply {
-                    color = Color.Blue.toArgb()
-                    valueTextSize = 12f
-                }
-
-                val barData = BarData(dataSet)
-                this.data = barData
-
-                // Format X-axis labels to show dates
-                val xAxis = this.xAxis
-                xAxis.valueFormatter = IndexAxisValueFormatter(ordersCount.map { it.first }) // Map indices to dates
-                xAxis.granularity = 1f
-                xAxis.position = XAxis.XAxisPosition.BOTTOM
-
-                axisLeft.granularity = 1f // Ensure whole numbers on Y-axis
-                axisRight.isEnabled = false
-
-                // Refresh chart
-                invalidate()
             }
+        },
+        update = { barChart ->
+            val entries = ordersCount.mapIndexed { index, data ->
+                Log.d("DEBUG", "Mapping Data: index=$index, date=${data.first}, count=${data.second}")
+                BarEntry(index.toFloat(), data.second.toFloat())
+            }
+
+            val dataSet = BarDataSet(entries, "Orders Per Day").apply {
+                color = Color.Blue.toArgb()
+                valueTextSize = 12f
+            }
+
+            val barData = BarData(dataSet)
+            barChart.data = barData
+
+            // Format X-axis labels
+            val xAxis = barChart.xAxis
+            xAxis.valueFormatter = IndexAxisValueFormatter(ordersCount.map { it.first })
+            xAxis.granularity = 1f
+            xAxis.position = XAxis.XAxisPosition.BOTTOM
+
+            barChart.axisLeft.granularity = 1f
+            barChart.axisRight.isEnabled = false
+
+            barChart.invalidate() // Refresh chart
         },
         modifier = Modifier
             .fillMaxWidth()
@@ -1674,6 +1682,69 @@ fun OrdersGraph(ordersCount: List<Pair<String, Int>>) {
     )
 }
 
+@Composable
+fun AnalyticsBottomSection(
+    topOrders: List<Pair<String, Int>>,
+    freqBoughtTogether: List<Pair<String, String>>
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        // Top Ordered Products (Left)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+        ) {
+            Text("Top Ordered Products", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (topOrders.isEmpty()) {
+                Text("No data available", color = Color.Gray)
+            } else {
+                topOrders.forEachIndexed { index, (product, quantity) ->
+                    Text(
+                        text = "${index + 1}. $product - $quantity orders",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // Frequently Bought Together (Right)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+        ) {
+            Text("Frequently Bought Together", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (freqBoughtTogether.isEmpty()) {
+                Text("No data available", color = Color.Gray)
+            } else {
+                freqBoughtTogether.forEachIndexed { index, (product1, product2) ->
+                    Text(
+                        text = "${index + 1}. $product1 & $product2",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
 
 
 

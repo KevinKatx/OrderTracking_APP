@@ -107,9 +107,9 @@ class OrderHandler(private val context: Context) {
     fun deleteData(productID: Int): Boolean {
         val db = dbHelper.writableDatabase
         val result = db.delete("Orders", "orderID = ?", arrayOf(productID.toString()))
-        db.close()
-        val result2 = db.delete("OrderDetails", "orderID = ?", arrayOf(productID.toString()))
 
+        val result2 = db.delete("OrderDetails", "orderID = ?", arrayOf(productID.toString()))
+        db.close()
         return if (result > 0 && result2 > 0) {
             Toast.makeText(context, "Delete Order and OrderDetails Successful", Toast.LENGTH_SHORT).show()
             true

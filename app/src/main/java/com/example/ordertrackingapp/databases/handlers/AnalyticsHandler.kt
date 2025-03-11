@@ -1,14 +1,19 @@
 package com.example.ordertrackingapp.databases.handlers
 
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
+import androidx.compose.runtime.MutableState
 import com.example.ordertrackingapp.databases.Tables.OrderDetails
 import com.example.ordertrackingapp.databases.Tables.Products
 
 class AnalyticsHandler(private val db: SQLiteDatabase) {
 
-    fun freqBoughtTogether(startDate: String, endDate: String): MutableList<Pair<String, String>> {
+    fun freqBoughtTogether(startDateState: MutableState<String>, endDateState: MutableState<String>): MutableList<Pair<String, String>> {
         val productPairs = mutableListOf<Pair<String, String>>()
+        val startDate = startDateState.value
+        val endDate = endDateState.value
 
+        Log.d("DEBUG", "Fetching top orders between: $startDate and $endDate")
         val query = """
             SELECT p1.productName AS Product1, p2.productName AS Product2, COUNT(*) AS Frequency
             FROM OrderDetails od1
@@ -30,6 +35,7 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
             do {
                 val product1 = cursor.getString(cursor.getColumnIndexOrThrow("Product1"))
                 val product2 = cursor.getString(cursor.getColumnIndexOrThrow("Product2"))
+                Log.d("DEBUG", "Bought Together: $product1 & $product2")
                 productPairs.add(Pair(product1, product2))
             } while (cursor.moveToNext())
         }
@@ -60,8 +66,12 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
     }
 
     // Get top 5 most frequently ordered products in a date range
-    fun getTopOrders(startDate: String, endDate: String): List<Pair<String, Int>> {
+    fun getTopOrders(startDateState: MutableState<String>, endDateState: MutableState<String>): List<Pair<String, Int>> {
         val topOrders = mutableListOf<Pair<String, Int>>()
+
+        val startDate = startDateState.value
+        val endDate = endDateState.value
+        Log.d("DEBUG", "Fetching top orders between: $startDate and $endDate")
         val query = """
             SELECT p.productName, SUM(od.quantity) as totalQuantity 
             FROM OrderDetails od
@@ -70,13 +80,14 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
             WHERE o.OrderDate BETWEEN ? AND ?
             GROUP BY od.productID
             ORDER BY totalQuantity DESC
-            LIMIT 5
+            LIMIT 5;
         """
         val cursor = db.rawQuery(query, arrayOf(startDate, endDate))
-
+        Log.d("DEBUG", "Top Order Rows Found: ${cursor.count}")
         while (cursor.moveToNext()) {
             val productName = cursor.getString(0)
             val totalQuantity = cursor.getInt(1)
+            Log.d("DEBUG", "Top Order: $productName - $totalQuantity")
             topOrders.add(Pair(productName, totalQuantity))
         }
         cursor.close()
