@@ -40,11 +40,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.ordertrackingapp.databases.DatabaseHelper
-
+import com.example.ordertrackingapp.databases.Tables.User
+import com.example.ordertrackingapp.databases.handlers.UserHandler
+import kotlinx.coroutines.launch
+import androidx.compose.material.*
 
 
 
 class MainActivity : ComponentActivity() {
+    //M4pUaUN1v3RsltY - Register Key, admin-Password
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +154,10 @@ fun AppNavigation() {
             HomeScreen(navController = navController, context)
         }
 
+        composable("register") {
+            RegisterScreen(navController)
+        }
+
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
@@ -242,10 +250,13 @@ fun AppNavigation() {
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
-    var text by remember { mutableStateOf("Initial") }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Create UserHandler instance
+    val userHandler = remember { UserHandler(context) }
 
     // Use a Box to position elements manually
     Box(
@@ -253,11 +264,10 @@ fun LoginScreen(navController: NavController) {
             .background(Color.White)
             .fillMaxSize(),
         contentAlignment = Alignment.TopCenter // Align content in the top center
-
     ) {
         Image(
             painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
+            contentDescription = "FoodStop Header",
             modifier = Modifier
                 .size(600.dp)
                 .offset(y = -215.dp) // Adjust the image position
@@ -271,32 +281,42 @@ fun LoginScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             TextField(
-                value = email,
-                onValueChange = {email = it},
-                label = {Text("Username")},
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
                 singleLine = true,
             )
             Spacer(modifier = Modifier.height(40.dp))
 
             TextField(
                 value = password,
-                onValueChange = {password = it},
-                label = {Text("Password")},
+                onValueChange = { password = it },
+                label = { Text("Password") },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation() // Hides password
+                visualTransformation = PasswordVisualTransformation() // Hides password with *
             )
+            Spacer(modifier = Modifier.height(40.dp))
         }
 
         // Button placement
         SubmitBTN(onClick = {
-            if((email == "admin" && password == "Password")||(email == "" && password == "")){
-                navController.navigate("home")
-            } else {
-                Toast.makeText(context, "Invalid Username or Password!", Toast.LENGTH_SHORT).show()
-            }
+            coroutineScope.launch {
+                if (username.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Username and password cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
 
+                val user = userHandler.authenticateUser(username, password)
+                if (user != null) {
+                    // Authentication successful
+                    Toast.makeText(context, "Welcome, ${user.username}!", Toast.LENGTH_SHORT).show()
+                    navController.navigate("home")
+                } else {
+                    // Authentication failed
+                    Toast.makeText(context, "Invalid username or password!", Toast.LENGTH_SHORT).show()
+                }
+            }
         })
 
         // Forgot password and Register User links
@@ -305,7 +325,6 @@ fun LoginScreen(navController: NavController) {
                 .offset(y = 650.dp)
                 .fillMaxWidth(),  // Ensure the Row takes up the full width
             horizontalArrangement = Arrangement.Center
-
         ) {
             Text(
                 "Forgot Password",
@@ -323,7 +342,7 @@ fun LoginScreen(navController: NavController) {
                 "Register User",
                 modifier = Modifier
                     .clickable {
-                        Toast.makeText(context, "Register Clicked", Toast.LENGTH_SHORT).show()
+                        navController.navigate("register")
                     }
                     .padding(40.dp, 0.dp, 0.dp, 0.dp)
             )
@@ -335,14 +354,26 @@ fun LoginScreen(navController: NavController) {
 
 @Composable
 fun SubmitBTN(onClick: () -> Unit) {
-    FilledTonalButton(
-        onClick = { onClick() },
+    Box(
         modifier = Modifier
-            .offset(y = 700.dp) // Adjust the button position
-            .width(200.dp)  // Set the width for the button
-            .height(50.dp)  // Set the height for the button
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
     ) {
-        Text("Login")
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF9800) // Orange color
+            ),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .offset(y = 600.dp)
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                "Login",
+                color = Color.White
+            )
+        }
     }
 }
 
@@ -504,4 +535,159 @@ fun PromoBTN(onClick: () -> Unit) {
 
     // Use the CreateButton function to display the button
     myButton.CreateButton()
+}
+
+@Composable
+fun RegisterScreen(navController: NavController) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var passkey by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val userHandler = remember { UserHandler(context) }
+
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "FoodStop Header",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .wrapContentSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Register New User",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            TextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirm Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = passkey,
+                onValueChange = { passkey = it },
+                label = { Text("System Passkey") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        // Validate input fields
+                        when {
+                            username.isBlank() || password.isBlank() || email.isBlank() || passkey.isBlank() -> {
+                                Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            password != confirmPassword -> {
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            userHandler.isUsernameExists(username) -> {
+                                Toast.makeText(context, "Username already exists", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            !userHandler.validatePasskey(passkey) -> {
+                                Toast.makeText(context, "Invalid system passkey", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            else -> {
+                                // All validations passed, create user
+                                val newUser = User(
+                                    username = username,
+                                    password = password,
+                                    email = email,
+                                    isAdmin = false
+                                )
+
+                                if (userHandler.insertUser(newUser)) {
+                                    Toast.makeText(context, "Registration successful! Please login.", Toast.LENGTH_SHORT).show()
+                                    navController.navigate("login")
+                                } else {
+                                    Toast.makeText(context, "Registration failed. Please try again.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
+                Text("Register")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = { navController.navigateUp() }
+            ) {
+                Text("Back to Login")
+            }
+        }
+    }
 }

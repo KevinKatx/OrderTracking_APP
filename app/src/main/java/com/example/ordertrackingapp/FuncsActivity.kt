@@ -1074,8 +1074,21 @@ fun SeeMenu(navController: NavController) {
     val productHandler = remember { ProductsHandler(context) }
     val products = remember { mutableStateOf(productHandler.readData()) }
     var selectedProduct by remember { mutableStateOf<Products?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
 
-
+    // Filter products based on search query
+    val filteredProducts = remember(products.value, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            products.value
+        } else {
+            products.value.filter { product ->
+                // Search by product ID, name, or price
+                product.Product_ID.toString().contains(searchQuery, ignoreCase = true) ||
+                        product.Product_name.contains(searchQuery, ignoreCase = true) ||
+                        product.Price.toString().contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     Box(modifier = Modifier
         .background(Color.White)
@@ -1094,36 +1107,70 @@ fun SeeMenu(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Search TextField
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by product ID, name, or price") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    focusedIndicatorColor = Color(0xFFFFA500),
+                    unfocusedIndicatorColor = Color(0xFFFFA500)
+                )
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)  // ✅ Allows LazyColumn to scroll
                     .fillMaxWidth()
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
-                ) {
-                    items(products.value, key = { it.Product_ID }) { product ->
-                        val isSelected = selectedProduct?.Product_ID == product.Product_ID
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .clickable {
-                                    Log.d("DB_QUERY", "Retrieved Product ID: ${product.Product_ID}")
-                                    selectedProduct = product
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color.Gray else Color.White
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Product ID: ${product.Product_ID}")
-                                Text("Product Name: ${product.Product_name}")
-                                Text("Price: ${product.Price}")
-
+                if (filteredProducts.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No products found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                    ) {
+                        items(filteredProducts, key = { it.Product_ID }) { product ->
+                            val isSelected = selectedProduct?.Product_ID == product.Product_ID
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        Log.d("DB_QUERY", "Retrieved Product ID: ${product.Product_ID}")
+                                        selectedProduct = product
+                                    },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color.Gray else Color.White
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Product ID: ${product.Product_ID}")
+                                    Text("Product Name: ${product.Product_name}")
+                                    Text("Price: ${product.Price}")
+                                }
                             }
                         }
                     }

@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB", null, 3) {
+class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB", null, 1) {
 
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL(
@@ -63,17 +63,40 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
                     "price INT NOT NULL)"
         )
 
+//        db?.execSQL(
+//            "CREATE TABLE Delivery (" +
+//                    "deliveryID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+//                    "orderID INTEGER, " +
+//                    "deliveryStart DATETIME, " +
+//                    "deliveryEnd DATETIME, " +
+//                    "deliveryDate TEXT DEFAULT (date('now')), " +
+//                    "status TEXT CHECK(status IN ('Pending', 'Out for Delivery', 'Delivered', 'Cancelled')), " +
+//                    "FOREIGN KEY(orderID) REFERENCES Orders(orderID)" +
+//                    ")"
+//        )
+
+        // New Users table for authentication
         db?.execSQL(
-            "CREATE TABLE Delivery (" +
-                    "deliveryID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "orderID INTEGER, " +
-                    "deliveryStart DATETIME, " +
-                    "deliveryEnd DATETIME, " +
-                    "deliveryDate TEXT DEFAULT (date('now')), " +
-                    "status TEXT CHECK(status IN ('Pending', 'Out for Delivery', 'Delivered', 'Cancelled')), " +
-                    "FOREIGN KEY(orderID) REFERENCES Orders(orderID)" +
+            "CREATE TABLE Users (" +
+                    "userID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "username TEXT UNIQUE NOT NULL, " +
+                    "password TEXT NOT NULL, " +
+                    "email TEXT, " +
+                    "isAdmin INTEGER DEFAULT 0" +  // 0 for false, 1 for true
                     ")"
         )
+
+        // System passkey table
+        db?.execSQL(
+            "CREATE TABLE SystemConfig (" +
+                    "configKey TEXT PRIMARY KEY, " +
+                    "configValue TEXT NOT NULL" +
+                    ")"
+        )
+
+        // Insert default admin user and passkey
+        db?.execSQL("INSERT INTO Users (username, password, email, isAdmin) VALUES ('admin', 'Password', 'admin@foodstop.com', 1)")
+        db?.execSQL("INSERT INTO SystemConfig (configKey, configValue) VALUES ('registration_passkey', 'M4pUaUN1v3RsltY')")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -85,6 +108,25 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
         db?.execSQL("DROP TABLE IF EXISTS Delivery")
         db?.execSQL("DROP TABLE IF EXISTS Delivery")
         onCreate(db)
+        if (oldVersion < newVersion) {
+            // Add new tables for users and system config if upgrading
+            db?.execSQL("CREATE TABLE IF NOT EXISTS Users (" +
+                    "userID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "username TEXT UNIQUE NOT NULL, " +
+                    "password TEXT NOT NULL, " +
+                    "email TEXT, " +
+                    "isAdmin INTEGER DEFAULT 0" +
+                    ")")
+
+            db?.execSQL("CREATE TABLE IF NOT EXISTS SystemConfig (" +
+                    "configKey TEXT PRIMARY KEY, " +
+                    "configValue TEXT NOT NULL" +
+                    ")")
+
+            // Insert default admin user and passkey if tables were just created
+            db?.execSQL("INSERT OR IGNORE INTO Users (username, password, email, isAdmin) VALUES ('admin', 'Password', 'admin@foodstop.com', 1)")
+            db?.execSQL("INSERT OR IGNORE INTO SystemConfig (configKey, configValue) VALUES ('registration_passkey', 'M4pUaUN1v3RsltY')")
+      }
     }
 
     override fun onDowngrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -94,6 +136,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
         db?.execSQL("DROP TABLE IF EXISTS Customers")
         db?.execSQL("DROP TABLE IF EXISTS Products")
         db?.execSQL("DROP TABLE IF EXISTS Delivery")
+        db?.execSQL("DROP TABLE IF EXISTS Users")
+        db?.execSQL("DROP TABLE IF EXISTS SystemConfig")
         onCreate(db)
     }
     companion object {
