@@ -74,13 +74,24 @@ fun OrderScreen(navController: NavController) {
     val orderHandler = remember { OrderHandler(context) }
     val orderDetailHandler = remember { OrderDetailsHandler(context) }
     val promosHandler = remember { PromosHandler(context) }
+    val customerHandler = remember { CustomerHandler(context) }
     val orders = remember { mutableStateOf(orderHandler.readData()) }
     var selectedOrder by remember { mutableStateOf<Order?>(null) }
 
-    // Function to get product IDs for an order
+    var searchQuery by remember { mutableStateOf("") }
+
     fun getProductIdsForOrder(orderID: Int): String {
         val orderDetails = orderDetailHandler.readData(orderID)
         return orderDetails.map { it.productID }.joinToString(", ")
+    }
+
+    fun getCustomerName(customerID: Int): String {
+        val customerList = customerHandler.readData(customerID)
+        return if (customerList.isNotEmpty()) {
+            customerList.first().Name
+        }else {
+            "No customer found"
+        }
     }
 
     fun getPromoName(promoID: Int): String {
@@ -93,7 +104,21 @@ fun OrderScreen(navController: NavController) {
         }
     }
 
-    // Log orders when the screen is first composed
+    val filteredOrders = remember(orders.value, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            orders.value
+        } else {
+            orders.value.filter { order ->
+                // Search by order ID, customer ID, customerName, status, or payment type
+                order.orderID.toString().contains(searchQuery, ignoreCase = true) ||
+                        order.customerID.toString().contains(searchQuery, ignoreCase = true) ||
+                        getCustomerName(order.customerID).contains(searchQuery, ignoreCase = true) || // Added this line
+                        order.status.contains(searchQuery, ignoreCase = true) ||
+                        order.paymentType.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         Log.d("DB_DEBUG", "Orders retrieved: ${orders.value}")
     }
@@ -106,7 +131,7 @@ fun OrderScreen(navController: NavController) {
             contentDescription = "My Image",
             modifier = Modifier
                 .size(600.dp)
-                .offset(y = -215.dp) // Adjust the image position
+                .offset(y = -215.dp)
         )
 
         Column(
@@ -116,54 +141,96 @@ fun OrderScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by order ID, customer ID, customerName, status or payment type") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    focusedIndicatorColor = Color(0xFFFFA500),
+                    unfocusedIndicatorColor = Color(0xFFFFA500)
+                )
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)  // ✅ Allows LazyColumn to scroll
                     .fillMaxWidth()
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
-                ) {
-                    items(orders.value, key = { it.orderID }) { order ->
-                        val isSelected = selectedOrder?.orderID == order.orderID
-                        val productIds = getProductIdsForOrder(order.orderID)
-                        val promoName = getPromoName(order.promoID)
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .clickable {
-                                    Log.d("DB_QUERY", "Retrieved Order ID: ${order.orderID}")
-                                    selectedOrder = order
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color.Gray else Color.White
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Order ID: ${order.orderID}")
-                                Text("Customer ID: ${order.customerID}")
-                                Text("Total Price: ${order.totalPrice}")
-                                Text("Promo Name: $promoName")
-                                Text("Status: ${order.status}")
-                                Text("Order Date: ${order.orderDate}")
-                                Text("Payment Type: ${order.paymentType}")
-                                Text("Product IDs: $productIds")
+                if (filteredOrders.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No orders found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                    ) {
+                        items(filteredOrders, key = { it.orderID }) { order ->
+                            val isSelected = selectedOrder?.orderID == order.orderID
+                            val productIds = getProductIdsForOrder(order.orderID)
+                            val promoName = getPromoName(order.promoID)
+                            val custName = getCustomerName(order.customerID)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        Log.d("DB_QUERY", "Retrieved Order ID: ${order.orderID}")
+                                        selectedOrder = order
+                                    },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color.Gray else Color.White
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Order ID: ${order.orderID}")
+                                    Text("Customer ID: ${order.customerID}")
+                                    Text("Customer Name: $custName")
+                                    Text("Total Price: ${order.totalPrice}")
+                                    Text("Promo Name: $promoName")
+                                    Text("Status: ${order.status}")
+                                    Text("Order Date: ${order.orderDate}")
+                                    Text("Payment Type: ${order.paymentType}")
+                                    Text("Product IDs: $productIds")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Rest of the existing code remains the same
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { navController.navigate("order_insert") },
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = { navController.navigate("order_insert") },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
-                    ) {
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Insert")
                 }
 
@@ -173,8 +240,11 @@ fun OrderScreen(navController: NavController) {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
                     enabled = selectedOrder != null
                 ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Edit")
                 }
+
                 Button(
                     onClick = {
                         selectedOrder?.let {
@@ -188,6 +258,8 @@ fun OrderScreen(navController: NavController) {
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Delete")
                 }
             }
@@ -1234,12 +1306,30 @@ fun CustomerScreen(navController: NavHostController) {
     val customerHandler = remember { CustomerHandler(context) }
     val customers = remember { mutableStateOf(customerHandler.readData()) }
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+
+    // Add search functionality
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter customers based on search query
+    val filteredCustomers = remember(customers.value, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            customers.value
+        } else {
+            customers.value.filter { customer ->
+                // Search by customer ID, name, type, or address
+                customer.Customer_ID.toString().contains(searchQuery, ignoreCase = true) ||
+                        customer.Name.contains(searchQuery, ignoreCase = true) ||
+                        customer.Type.contains(searchQuery, ignoreCase = true) ||
+                        customer.Address.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .background(Color.White)
             .fillMaxSize(),
         contentAlignment = Alignment.TopCenter // Align content in the top center
-
     ) {
         Image(
             painter = painterResource(id = R.drawable.foodstop_header),
@@ -1255,51 +1345,92 @@ fun CustomerScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by customer ID, name, type or address") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    focusedIndicatorColor = Color(0xFFFFA500),
+                    unfocusedIndicatorColor = Color(0xFFFFA500)
+                )
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)  // ✅ Allows LazyColumn to scroll
                     .fillMaxWidth()
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
-                ) {
-                    items(customers.value, key = { it.Customer_ID }) { customer ->
-                        val isSelected = selectedCustomer?.Customer_ID == customer.Customer_ID
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .clickable {
-                                    Log.d(
-                                        "DB_QUERY",
-                                        "Retrieved Product ID: ${customer.Customer_ID}"
-                                    )
-                                    selectedCustomer = customer
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color.Gray else Color.White
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Customer ID: ${customer.Customer_ID}")
-                                Text("Name: ${customer.Name}")
-                                Text("Type: ${customer.Type}")
-                                Text("Address: ${customer.Address}")
-
+                if (filteredCustomers.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No customers found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                    ) {
+                        items(filteredCustomers, key = { it.Customer_ID }) { customer ->
+                            val isSelected = selectedCustomer?.Customer_ID == customer.Customer_ID
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        Log.d(
+                                            "DB_QUERY",
+                                            "Retrieved Product ID: ${customer.Customer_ID}"
+                                        )
+                                        selectedCustomer = customer
+                                    },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color.Gray else Color.White
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Customer ID: ${customer.Customer_ID}")
+                                    Text("Name: ${customer.Name}")
+                                    Text("Type: ${customer.Type}")
+                                    Text("Address: ${customer.Address}")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { navController.navigate("customer_insert") },
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = { navController.navigate("customer_insert") },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
-                    ) {
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Insert")
                 }
 
@@ -1309,18 +1440,24 @@ fun CustomerScreen(navController: NavHostController) {
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Edit")
                 }
 
                 Button(
                     onClick = {
-                        selectedCustomer?.let { customerHandler.deleteData(it.Customer_ID)}
-                        customers.value = customerHandler.readData()
+                        selectedCustomer?.let {
+                            customerHandler.deleteData(it.Customer_ID)
+                            customers.value = customerHandler.readData()
+                        }
                     },
                     enabled = selectedCustomer != null,
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Delete")
                 }
             }
@@ -2248,6 +2385,23 @@ fun PromoScreen(navController: NavController){
     val promos = remember { mutableStateOf(promoHandler.readData()) }
     var selectedPromo by remember { mutableStateOf<Promos?>(null) }
 
+    // Add search functionality
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Filter promos based on search query
+    val filteredPromos = remember(promos.value, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            promos.value
+        } else {
+            promos.value.filter { promo ->
+                // Search by promo ID, name, or type
+                promo.Promo_ID.toString().contains(searchQuery, ignoreCase = true) ||
+                        promo.Name.contains(searchQuery, ignoreCase = true) ||
+                        promo.Type.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
     Box(modifier = Modifier
         .background(Color.White)
         .fillMaxSize()){
@@ -2266,52 +2420,90 @@ fun PromoScreen(navController: NavController){
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by promo ID, name or type") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    focusedIndicatorColor = Color(0xFFFFA500),
+                    unfocusedIndicatorColor = Color(0xFFFFA500)
+                )
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)  // ✅ Allows LazyColumn to scroll
                     .fillMaxWidth()
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 16.dp) // Prevents cut-off at the bottom
-                ) {
-                    items(promos.value, key = { it.Promo_ID }) { promo ->
-                        val isSelected = selectedPromo?.Promo_ID == promo.Promo_ID
-
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .clickable {
-                                    Log.d("DB_QUERY", "Retrieved Order ID: ${promo.Promo_ID}")
-                                    selectedPromo = promo
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color.Gray else Color.White
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Promo ID: ${promo.Promo_ID}")
-                                Text("Promo Name: ${promo.Name}")
-                                Text("Type: ${promo.Type}")
-                                Text("Discount Percent: ${promo.DiscountPercent}%")
-                                Text("Discount Flat: ${promo.DiscountFlat}")
-
+                if (filteredPromos.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No promos found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp) // Prevents cut-off at the bottom
+                    ) {
+                        items(filteredPromos, key = { it.Promo_ID }) { promo ->
+                            val isSelected = selectedPromo?.Promo_ID == promo.Promo_ID
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        Log.d("DB_QUERY", "Retrieved Order ID: ${promo.Promo_ID}")
+                                        selectedPromo = promo
+                                    },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color.Gray else Color.White
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Promo ID: ${promo.Promo_ID}")
+                                    Text("Promo Name: ${promo.Name}")
+                                    Text("Type: ${promo.Type}")
+                                    Text("Discount Percent: ${promo.DiscountPercent}%")
+                                    Text("Discount Flat: ${promo.DiscountFlat}")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Rest of the existing code remains the same
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { navController.navigate("promo_insert") },
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = { navController.navigate("promo_insert") },
                     shape = RoundedCornerShape(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
                 ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Insert")
                 }
 
@@ -2321,8 +2513,11 @@ fun PromoScreen(navController: NavController){
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
                     enabled = selectedPromo != null
                 ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Edit")
                 }
+
                 Button(
                     onClick = {
                         selectedPromo?.let {
@@ -2334,6 +2529,8 @@ fun PromoScreen(navController: NavController){
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
                     enabled = selectedPromo != null
                 ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Delete")
                 }
             }
