@@ -1,26 +1,22 @@
 package com.example.ordertrackingapp
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import android.graphics.Paint.Align
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,26 +30,25 @@ import com.example.ordertrackingapp.ui.theme.OrderTrackingAPPTheme
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.navigation.NavHostController
-import com.example.ordertrackingapp.databases.Tables.Order
-import com.example.ordertrackingapp.databases.handlers.OrderHandler
-import java.time.LocalDate
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.ordertrackingapp.databases.DatabaseHelper
+import com.example.ordertrackingapp.databases.Tables.User
+import com.example.ordertrackingapp.databases.handlers.UserHandler
+import kotlinx.coroutines.launch
+import androidx.compose.material.*
+
 
 
 class MainActivity : ComponentActivity() {
+    //M4pUaUN1v3RsltY - Register Key, admin-Password
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +60,7 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.statusBars()) // ✅ This works on lower APIs
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+
         setContent {
             OrderTrackingAPPTheme {
                 AppNavigation()
@@ -72,6 +68,8 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
 }
 
 
@@ -150,16 +148,22 @@ class CustomButton(
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
-    NavHost(navController = navController, startDestination = "home") {
+    val context = LocalContext.current
+    NavHost(navController = navController, startDestination = "login") {
         composable("home") {
-            HomeScreen(navController = navController)
+            HomeScreen(navController = navController, context)
         }
+
+        composable("register") {
+            RegisterScreen(navController)
+        }
+
         composable("login") {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
-        composable("order") {
-            OrderScreen(navController = navController)
+
+        composable("delivery"){
+            DeliveryScreen(navController = navController)
         }
 
         composable("analytics") {
@@ -168,10 +172,33 @@ fun AppNavigation() {
         composable("customer") {
             CustomerScreen(navController = navController)
         }
-        composable("products"){
-            ProductsScreen(navController = navController)
+        composable("customer_insert") {
+            CustomerInsert(navController = navController)
         }
-
+        composable("customer_edit/{id}") { backStackEntry ->
+            val customerId = backStackEntry.arguments?.getString("id")
+            if (customerId != null) {
+                CustomerEdit(navController = navController, customerId.toInt())
+            }
+        }
+        composable("products"){
+            SeeMenu(navController = navController)
+        }
+        composable("product_insert"){
+            ProductInsert(navController = navController)
+        }
+        composable("product_edit/{id}") { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("id")
+            if (productId != null) {
+                ProductEdit(navController = navController, productId.toInt())
+            }
+        }
+        composable("order") {
+            OrderScreen(navController = navController)
+        }
+        composable("order_insert"){
+            OrderInsert(navController=navController)
+        }
         composable("order_edit/{id}") { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("id")
             if (orderId != null) {
@@ -179,11 +206,39 @@ fun AppNavigation() {
             }
         }
 
-        composable("customer_edit/{id}") { backStackEntry ->
-            val customerId = backStackEntry.arguments?.getString("id")
-            if (customerId != null) {
-                OrderEdit(navController = navController, customerId.toInt())
+        composable("select_products") {
+            SelectProducts(navController)
+        }
+
+        composable("promo") {
+            PromoScreen(navController = navController) // Your Login Screen Composable
+        }
+
+        composable("promo_insert") {
+            PromoInsert(navController = navController) // Your Login Screen Composable
+        }
+
+        composable("promo_edit/{id}") { backStackEntry ->
+            val promoIdString = backStackEntry.arguments?.getString("id")
+            val promoId = promoIdString?.toIntOrNull()
+            if(promoId != null) {
+                PromoEdit(navController = navController, promoID = promoId)
             }
+        }
+        composable("select_promos") {
+            SeePromo(navController=navController)
+        }
+
+        composable("delivery_insert") {
+            DeliveryInsert(navController)
+        }
+
+        composable(
+            "delivery_edit/{deliveryID}",
+            arguments = listOf(navArgument("deliveryID") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val deliveryID = backStackEntry.arguments?.getInt("deliveryID")
+            DeliveryEdit(navController, deliveryID)
         }
 
     }
@@ -195,10 +250,13 @@ fun AppNavigation() {
 
 @Composable
 fun LoginScreen(navController: NavController) {
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
-    var text by remember { mutableStateOf("Initial") }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Create UserHandler instance
+    val userHandler = remember { UserHandler(context) }
 
     // Use a Box to position elements manually
     Box(
@@ -206,11 +264,10 @@ fun LoginScreen(navController: NavController) {
             .background(Color.White)
             .fillMaxSize(),
         contentAlignment = Alignment.TopCenter // Align content in the top center
-
     ) {
         Image(
             painter = painterResource(id = R.drawable.foodstop_header),
-            contentDescription = "My Image",
+            contentDescription = "FoodStop Header",
             modifier = Modifier
                 .size(600.dp)
                 .offset(y = -215.dp) // Adjust the image position
@@ -224,32 +281,42 @@ fun LoginScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             TextField(
-                value = email,
-                onValueChange = {email = it},
-                label = {Text("Username")},
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
                 singleLine = true,
             )
             Spacer(modifier = Modifier.height(40.dp))
 
             TextField(
                 value = password,
-                onValueChange = {password = it},
-                label = {Text("Password")},
+                onValueChange = { password = it },
+                label = { Text("Password") },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation() // Hides password
+                visualTransformation = PasswordVisualTransformation() // Hides password with *
             )
+            Spacer(modifier = Modifier.height(40.dp))
         }
 
         // Button placement
         SubmitBTN(onClick = {
-            if((email == "admin" && password == "Password")||(email == "" && password == "")){
-                navController.navigate("home")
-            } else {
-                Toast.makeText(context, "Invalid Username or Password!", Toast.LENGTH_SHORT).show()
-            }
+            coroutineScope.launch {
+                if (username.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Username and password cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
 
+                val user = userHandler.authenticateUser(username, password)
+                if (user != null) {
+                    // Authentication successful
+                    Toast.makeText(context, "Welcome, ${user.username}!", Toast.LENGTH_SHORT).show()
+                    navController.navigate("home")
+                } else {
+                    // Authentication failed
+                    Toast.makeText(context, "Invalid username or password!", Toast.LENGTH_SHORT).show()
+                }
+            }
         })
 
         // Forgot password and Register User links
@@ -258,7 +325,6 @@ fun LoginScreen(navController: NavController) {
                 .offset(y = 650.dp)
                 .fillMaxWidth(),  // Ensure the Row takes up the full width
             horizontalArrangement = Arrangement.Center
-
         ) {
             Text(
                 "Forgot Password",
@@ -276,7 +342,7 @@ fun LoginScreen(navController: NavController) {
                 "Register User",
                 modifier = Modifier
                     .clickable {
-                        Toast.makeText(context, "Register Clicked", Toast.LENGTH_SHORT).show()
+                        navController.navigate("register")
                     }
                     .padding(40.dp, 0.dp, 0.dp, 0.dp)
             )
@@ -288,20 +354,34 @@ fun LoginScreen(navController: NavController) {
 
 @Composable
 fun SubmitBTN(onClick: () -> Unit) {
-    FilledTonalButton(
-        onClick = { onClick() },
+    Box(
         modifier = Modifier
-            .offset(y = 700.dp) // Adjust the button position
-            .width(200.dp)  // Set the width for the button
-            .height(50.dp)  // Set the height for the button
+            .fillMaxWidth(),
+        contentAlignment = Alignment.Center
     ) {
-        Text("Login")
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF9800) // Orange color
+            ),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier
+                .offset(y = 600.dp)
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                "Login",
+                color = Color.White
+            )
+        }
     }
 }
 
 
 @Composable
-fun HomeScreen(navController: NavController){
+fun HomeScreen(navController: NavController, context: Context){
+    val db = DatabaseHelper.getInstance(context).writableDatabase
+
     Box(
         modifier = Modifier
             .background(Color.White)
@@ -328,7 +408,9 @@ fun HomeScreen(navController: NavController){
             ProductsBTN(onClick = {
                 navController.navigate("products")
             })
-
+            PromoBTN(onClick = {
+                navController.navigate("promo")
+            })
             AnalyticsBTN(onClick = {
                 navController.navigate("analytics")
             })
@@ -337,7 +419,9 @@ fun HomeScreen(navController: NavController){
                 navController.navigate("customer")
             })
 
-
+            DeliveryBTN(onClick = {
+                navController.navigate("delivery")
+            })
 
             LogoutBTN(
                 onClick = {
@@ -354,6 +438,27 @@ fun HomeScreen(navController: NavController){
         }
 
     }
+}
+
+@Composable
+fun DeliveryBTN(onClick: () -> Unit){
+    val myButton = CustomButton(
+        label = "Delivery",
+        onClick = onClick,
+        iconId = R.drawable.delivery
+    )
+    myButton.CreateButton()
+}
+
+
+@Composable
+fun AddOrderBTN(onClick: () -> Unit){
+    val myButton = CustomButton(
+        label = "Add Order",
+        onClick = onClick,
+        iconId = R.drawable.order,
+    )
+    myButton.CreateButton()
 }
 
 
@@ -387,7 +492,7 @@ fun AnalyticsBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Analytics",
         onClick = onClick,
-        iconId = R.drawable.delivery, // Replace with your icon
+        iconId = R.drawable.analytics, // Replace with your icon
     )
 
     // Use the CreateButton function to display the button
@@ -418,4 +523,171 @@ fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
 
     // Use the CreateButton function to display the button
     myButton.CreateButton()
+}
+
+@Composable
+fun PromoBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Promo",
+        onClick = onClick,
+        iconId = R.drawable.discount, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+@Composable
+fun RegisterScreen(navController: NavController) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var passkey by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val userHandler = remember { UserHandler(context) }
+
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "FoodStop Header",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .wrapContentSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Register New User",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            TextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirm Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = passkey,
+                onValueChange = { passkey = it },
+                label = { Text("System Passkey") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        // Validate input fields
+                        when {
+                            username.isBlank() || password.isBlank() || email.isBlank() || passkey.isBlank() -> {
+                                Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            password != confirmPassword -> {
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            userHandler.isUsernameExists(username) -> {
+                                Toast.makeText(context, "Username already exists", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            !userHandler.validatePasskey(passkey) -> {
+                                Toast.makeText(context, "Invalid system passkey", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            else -> {
+                                // All validations passed, create user
+                                val newUser = User(
+                                    username = username,
+                                    password = password,
+                                    email = email,
+                                    isAdmin = false
+                                )
+
+                                if (userHandler.insertUser(newUser)) {
+                                    Toast.makeText(context, "Registration successful! Please login.", Toast.LENGTH_SHORT).show()
+                                    navController.navigate("login")
+                                } else {
+                                    Toast.makeText(context, "Registration failed. Please try again.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
+                Text("Register")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = { navController.navigateUp() }
+            ) {
+                Text("Back to Login")
+            }
+        }
+    }
 }

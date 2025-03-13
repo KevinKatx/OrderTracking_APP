@@ -3,8 +3,6 @@ package com.example.ordertrackingapp.databases.Tables
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.time.LocalDate
-import kotlin.collections.List
-import kotlin.reflect.full.memberProperties
 
 class Order {
     var orderID: Int = 0 // Primary Key (PK)
@@ -18,8 +16,11 @@ class Order {
     var paymentType: String = ""
 
     @RequiresApi(Build.VERSION_CODES.O)
-    constructor(customerID: Int, totalPrice: Int, promoID: Int,
-                status: String, orderDate: LocalDate, paymentType: String) {
+    constructor(
+        orderID: Int, customerID: Int, totalPrice: Int, promoID: Int,
+        status: String, orderDate: LocalDate, paymentType: String
+    ) {
+        this.orderID = orderID
         this.customerID = customerID
         this.totalPrice = totalPrice
         this.promoID = promoID
@@ -32,7 +33,8 @@ class Order {
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun toString(): String {
-        return "Order(order_ID=$orderID, customerID=$customerID, totalPrice=$totalPrice, " +
-                "promoID=$promoID, status=$status, orderDate=$orderDate, paymentType=$paymentType)"
+        return "Order(orderID=$orderID,  customerID=$customerID, " +
+                "totalPrice=$totalPrice, promoID=$promoID, status=$status, " +
+                "orderDate=$orderDate, paymentType=$paymentType)"
     }
 }

@@ -3,46 +3,26 @@ package com.example.ordertrackingapp.databases.handlers
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.example.ordertrackingapp.databases.DatabaseHelper
+import android.os.Build
 import com.example.ordertrackingapp.databases.Tables.Order
 import java.time.LocalDate
 
-class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB",null,1){
-    override fun onCreate(db: SQLiteDatabase?){
-        val createTable = "CREATE TABLE Orders (" +
-                "orderID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "customerID INTEGER, " +
-                "TotalPrice INTEGER, " +
-                "PromoID INTEGER, " +
-                "Status TEXT, " +
-                "OrderDate TEXT DEFAULT (date('now')), " +
-                "PaymentType TEXT)"
+class OrderHandler(private val context: Context) {
 
-        db?.execSQL(createTable)
+    private val dbHelper = DatabaseHelper(context)
 
-        val insertDummyOrder = "INSERT INTO Orders (customerID, TotalPrice, PromoID, Status, PaymentType) " +
-                "VALUES (1, 100, 0, 'Pending', 'Credit Card')"
-
-        db?.execSQL(insertDummyOrder)
-
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        db?.execSQL("DROP TABLE IF EXISTS Orders")
-        onCreate(db)
-    }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun insertData(order : Order): Boolean {
-        val db = this.writableDatabase
+    fun insertData(order: Order): Boolean {
+        val db = dbHelper.writableDatabase
         val cv = ContentValues().apply {
             put("customerID", order.customerID)
-            put("TotalPrice", order.totalPrice)
             put("PromoID", order.promoID)
+            put("TotalPrice", order.totalPrice)
             put("Status", order.status)
             put("OrderDate", order.orderDate.toString()) // Ensure it's stored as a string
             put("PaymentType", order.paymentType)
@@ -51,11 +31,14 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
         val result = db.insert("Orders", null, cv)
         db.close()
 
+        Log.d("DB_INSERT", "Insert Order result: $result")
         return if (result == -1L) {
             Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
+            Log.e("DB_ERROR", "Insert failed")
             false
         } else {
-            Toast.makeText(context, "Insert Successful", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Insert Order Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_SUCCESS", "Insert Order successful with ID: $result")
             true
         }
     }
@@ -63,7 +46,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
     @RequiresApi(Build.VERSION_CODES.O)
     fun readData(orderID: Int? = null): MutableList<Order> {
         val list: MutableList<Order> = ArrayList()
-        val db = this.readableDatabase
+        val db = dbHelper.readableDatabase
         val query = if (orderID != null) {
             "SELECT * FROM Orders WHERE orderID = ?"
         } else {
@@ -77,46 +60,14 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
         if (result.moveToFirst()) {
             do {
-                // Ensure columns match exactly
-                val orderIDIndex = result.getColumnIndex("orderID")
-                val customerIDIndex = result.getColumnIndex("customerID")
-                val totalPriceIndex = result.getColumnIndex("TotalPrice")
-                val promoIDIndex = result.getColumnIndex("PromoID")
-                val statusIndex = result.getColumnIndex("Status")
-                val orderDateIndex = result.getColumnIndex("OrderDate")
-                val paymentTypeIndex = result.getColumnIndex("PaymentType")
+                val orderID = result.getInt(result.getColumnIndexOrThrow("orderID"))
+                val customerID = result.getInt(result.getColumnIndexOrThrow("customerID"))
+                val totalPrice = result.getInt(result.getColumnIndexOrThrow("TotalPrice"))
+                val promoID = result.getInt(result.getColumnIndexOrThrow("PromoID"))
+                val status = result.getString(result.getColumnIndexOrThrow("Status"))
+                val paymentType = result.getString(result.getColumnIndexOrThrow("PaymentType"))
 
-                Log.d("DB_DEBUG", "orderID index: $orderIDIndex")
-                Log.d("DB_DEBUG", "customerID index: $customerIDIndex")
-                Log.d("DB_DEBUG", "TotalPrice index: $totalPriceIndex")
-                Log.d("DB_DEBUG", "PromoID index: $promoIDIndex")
-                Log.d("DB_DEBUG", "Status index: $statusIndex")
-                Log.d("DB_DEBUG", "OrderDate index: $orderDateIndex")
-                Log.d("DB_DEBUG", "PaymentType index: $paymentTypeIndex")
-
-                if (orderIDIndex == -1 || customerIDIndex == -1 || totalPriceIndex == -1 ||
-                    promoIDIndex == -1 || statusIndex == -1 || orderDateIndex == -1 || paymentTypeIndex == -1) {
-
-                    if (orderIDIndex == -1) Log.e("DB_ERROR", "Column 'orderID' is missing!")
-                    if (customerIDIndex == -1) Log.e("DB_ERROR", "Column 'customerID' is missing!")
-                    if (totalPriceIndex == -1) Log.e("DB_ERROR", "Column 'TotalPrice' is missing!")
-                    if (promoIDIndex == -1) Log.e("DB_ERROR", "Column 'PromoID' is missing!")
-                    if (statusIndex == -1) Log.e("DB_ERROR", "Column 'Status' is missing!")
-                    if (orderDateIndex == -1) Log.e("DB_ERROR", "Column 'OrderDate' is missing!")
-                    if (paymentTypeIndex == -1) Log.e("DB_ERROR", "Column 'PaymentType' is missing!")
-                    continue
-                }
-
-                // Extract values
-                val orderID = result.getInt(orderIDIndex)
-                val customerID = result.getInt(customerIDIndex)
-                val totalPrice = result.getInt(totalPriceIndex)
-                val promoID = result.getInt(promoIDIndex)
-                val status = result.getString(statusIndex)
-                val paymentType = result.getString(paymentTypeIndex)
-
-                // Parse OrderDate
-                val orderDateString = result.getString(orderDateIndex)
+                val orderDateString = result.getString(result.getColumnIndexOrThrow("OrderDate"))
                 val orderDate = try {
                     LocalDate.parse(orderDateString)
                 } catch (e: Exception) {
@@ -124,9 +75,7 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
                     LocalDate.now()
                 }
 
-                val order = Order(customerID, totalPrice, promoID, status, orderDate, paymentType)
-                order.orderID = orderID
-
+                val order = Order(orderID, customerID, totalPrice, promoID, status, orderDate, paymentType)
                 list.add(order)
             } while (result.moveToNext())
         } else {
@@ -140,21 +89,54 @@ class OrderHandler (var context: Context) : SQLiteOpenHelper(context,"FoodStopDB
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun updateData(order: Order): Int {
-        val db = this.writableDatabase
-        val cv = ContentValues()
+        val db = dbHelper.writableDatabase
+        val cv = ContentValues().apply {
+            put("customerID", order.customerID)
+            put("TotalPrice", order.totalPrice)
+            put("PromoID", order.promoID)
+            put("Status", order.status)
+            put("OrderDate", order.orderDate.toString()) // Convert LocalDate to String
+            put("PaymentType", order.paymentType)
+        }
 
-        // Setting updated values
-        cv.put("customerID", order.customerID)
-        cv.put("TotalPrice", order.totalPrice)
-        cv.put("PromoID", order.promoID)
-        cv.put("Status", order.status)
-        cv.put("OrderDate", order.orderDate.toString()) // Convert LocalDate to String
-        cv.put("PaymentType", order.paymentType)
-
-        // Updating the row where orderID matches
         val result = db.update("Orders", cv, "orderID = ?", arrayOf(order.orderID.toString()))
-
         db.close()
         return result // Returns number of rows affected
     }
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun deleteData(productID: Int): Boolean {
+        val db = dbHelper.writableDatabase
+        val result = db.delete("Orders", "orderID = ?", arrayOf(productID.toString()))
+
+        val result2 = db.delete("OrderDetails", "orderID = ?", arrayOf(productID.toString()))
+        db.close()
+        return if (result > 0 && result2 > 0) {
+            Toast.makeText(context, "Delete Order and OrderDetails Successful", Toast.LENGTH_SHORT).show()
+            true
+        } else {
+            Toast.makeText(context, "Order Deletion Failed", Toast.LENGTH_SHORT).show()
+            false
+        }
+
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getLatestOrderID(): Int {
+        val db = dbHelper.readableDatabase
+        val query = "SELECT MAX(orderID) FROM `Orders`" // Query without curly braces
+        val cursor = db.rawQuery(query, null) // No need to pass arrayOf(orderID)
+
+        var latestOrderID = 0 // Default value if no records found
+
+        if (cursor.moveToFirst() && !cursor.isNull(0)) { // Check if cursor is not empty and not null
+            latestOrderID = cursor.getInt(0)
+        }
+
+        cursor.close() // Always close the cursor
+        db.close() // Close the database connection
+
+        return latestOrderID
+    }
+
 }
