@@ -22,6 +22,16 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
         )
 
         db?.execSQL(
+            "CREATE TABLE Delivery(" +
+                    "deliveryID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "orderID INTEGER, " +
+                    "deliveryDate TEXT DEFAULT (date('now')), " +
+                    "deliveryStart TEXT DEFAULT (time('now')), " +
+                    "deliveryEnd TEXT DEFAULT (time('now')), " +
+                    "status TEXT CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Cancelled')))"
+        )
+
+        db?.execSQL(
             "CREATE TABLE OrderDetails (" +
                     "orderID INTEGER, " +
                     "productID INTEGER, " +
@@ -72,6 +82,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
         db?.execSQL("DROP TABLE IF EXISTS Promos")
         db?.execSQL("DROP TABLE IF EXISTS Customers")
         db?.execSQL("DROP TABLE IF EXISTS Products")
+        db?.execSQL("DROP TABLE IF EXISTS Delivery")
         db?.execSQL("DROP TABLE IF EXISTS Delivery")
         onCreate(db)
     }

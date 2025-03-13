@@ -33,8 +33,15 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import java.time.LocalDate
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
@@ -42,6 +49,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import com.example.ordertrackingapp.databases.DatabaseHelper
 import com.example.ordertrackingapp.databases.Tables.*
 import com.example.ordertrackingapp.databases.handlers.*
@@ -53,6 +61,7 @@ import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -2409,4 +2418,620 @@ fun SeePromo(navController: NavController) {
             
         }
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DeliveryScreen(navController: NavController) {
+    val context = LocalContext.current
+    val deliveryHandler = remember { DeliveryHandler(context) }
+    val orderHandler = remember { OrderHandler(context) }
+    val deliveries = remember { mutableStateOf(deliveryHandler.readData()) }
+    var selectedDelivery by remember { mutableStateOf<Delivery?>(null) }
+
+    // Add search functionality
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Function to get order details for a delivery
+    fun getOrderDetailsForDelivery(orderID: Int): Order? {
+        val orderList = orderHandler.readData(orderID)
+        return if (orderList.isNotEmpty()) {
+            orderList.first()
+        } else {
+            null
+        }
+    }
+
+    // Filter deliveries based on search query
+    val filteredDeliveries = remember(deliveries.value, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            deliveries.value
+        } else {
+            deliveries.value.filter { delivery ->
+                // Search by delivery ID or order ID
+                delivery.Delivery_ID.toString().contains(searchQuery, ignoreCase = true) ||
+                        delivery.Order_ID.toString().contains(searchQuery, ignoreCase = true) ||
+                        delivery.status.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    // Refresh deliveries list
+    fun refreshDeliveries() {
+        deliveries.value = deliveryHandler.readData()
+        selectedDelivery = null
+    }
+
+    // Log deliveries when the screen is first composed
+    LaunchedEffect(Unit) {
+        Log.d("DB_DEBUG", "Deliveries retrieved: ${deliveries.value}")
+    }
+
+    Box(
+        modifier = Modifier
+            .background(Color.White)
+            .fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "Header Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by delivery ID, order ID or status") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color(0xFFFFA500).copy(alpha = 0.1f),
+                    focusedIndicatorColor = Color(0xFFFFA500),
+                    unfocusedIndicatorColor = Color(0xFFFFA500)
+                )
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (filteredDeliveries.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No deliveries found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        items(filteredDeliveries, key = { it.Delivery_ID }) { delivery ->
+                            val isSelected = selectedDelivery?.Delivery_ID == delivery.Delivery_ID
+                            val orderDetails = getOrderDetailsForDelivery(delivery.Order_ID)
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .clickable {
+                                        Log.d("DB_QUERY", "Retrieved Delivery ID: ${delivery.Delivery_ID}")
+                                        selectedDelivery = delivery
+                                    },
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color.Gray else Color.White
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "Delivery #${delivery.Delivery_ID}",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+
+                                        // Status badge
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    when (delivery.status) {
+                                                        "Pending" -> Color.Yellow
+                                                        "In Transit" -> Color.Blue
+                                                        "Delivered" -> Color.Green
+                                                        "Canceled" -> Color.Red
+                                                        else -> Color.Gray
+                                                    },
+                                                    shape = RoundedCornerShape(12.dp)
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = delivery.status,
+                                                color = if (delivery.status == "Pending") Color.Black else Color.White,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
+                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                                    Text("Order ID: ${delivery.Order_ID}")
+
+                                    // Display order information if available
+                                    orderDetails?.let {
+                                        Text("Customer ID: ${it.customerID}")
+                                        Text("Order Total: $${it.totalPrice}")
+                                        Text("Order Status: ${it.status}")
+                                    }
+
+                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text("Delivery Date", fontWeight = FontWeight.Bold)
+                                            Text("${delivery.deliveryDate}")
+                                        }
+
+                                        Column {
+                                            Text("Delivery Time", fontWeight = FontWeight.Bold)
+                                            Text("${delivery.deliveryStart} - ${delivery.deliveryEnd}")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(
+                    onClick = { navController.navigate("delivery_insert") },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Insert")
+                }
+
+                Button(
+                    onClick = { selectedDelivery?.let { navController.navigate("delivery_edit/${it.Delivery_ID}") } },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
+                    enabled = selectedDelivery != null
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit")
+                }
+
+                Button(
+                    onClick = {
+                        selectedDelivery?.let {
+                            deliveryHandler.deleteData(it.Delivery_ID)
+                            refreshDeliveries()
+                        }
+                    },
+                    enabled = selectedDelivery != null,
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Delete")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DeliveryEdit(navController: NavController, deliveryID: Int? = null) {
+    val context = LocalContext.current
+    val deliveryHandler = DeliveryHandler(context)
+    val orderHandler = OrderHandler(context)
+
+    // Orders for dropdown selection
+    val orders = remember { orderHandler.readData() }
+    var expandedOrder by remember { mutableStateOf(false) }
+
+    // Get existing delivery if editing
+    val delivery = remember { mutableStateOf(deliveryID?.let { deliveryHandler.readData(it).firstOrNull() }) }
+
+    // Form state variables with default values from delivery or empty
+    var orderID by remember { mutableStateOf(delivery.value?.Order_ID?.toString() ?: "") }
+    var deliveryDate by remember { mutableStateOf(delivery.value?.deliveryDate?.toString() ?: LocalDate.now().toString()) }
+    var deliveryStart by remember { mutableStateOf(delivery.value?.deliveryStart?.toString() ?: LocalTime.now().toString()) }
+    var deliveryEnd by remember { mutableStateOf(delivery.value?.deliveryEnd?.toString() ?: LocalTime.now().plusHours(1).toString()) }
+    var status by remember { mutableStateOf(delivery.value?.status ?: "Pending") }
+
+    // Status dropdown state
+    var expandedStatus by remember { mutableStateOf(false) }
+    val statuses = listOf("Pending", "In Transit", "Delivered", "Canceled")
+
+    // Date and time pickers
+    val showDatePicker = remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    val showStartTimePicker = remember { mutableStateOf(false) }
+    val showEndTimePicker = remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier
+        .background(Color.White)
+        .fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.foodstop_header),
+            contentDescription = "Header Image",
+            modifier = Modifier
+                .size(600.dp)
+                .offset(y = -215.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Order selection dropdown
+            ExposedDropdownMenuBox(
+                expanded = expandedOrder,
+                onExpandedChange = { expandedOrder = it }
+            ) {
+                TextField(
+                    value = if (orderID.isNotBlank()) {
+                        val selectedOrder = orders.find { it.orderID.toString() == orderID }
+                        "Order #${selectedOrder?.orderID} - ${selectedOrder?.totalPrice ?: 0}"
+                    } else "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Select Order") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedOrder)
+                    },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedOrder,
+                    onDismissRequest = { expandedOrder = false }
+                ) {
+                    orders.forEach { order ->
+                        DropdownMenuItem(
+                            text = { Text("Order #${order.orderID} - ${order.totalPrice}") },
+                            onClick = {
+                                orderID = order.orderID.toString()
+                                expandedOrder = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Date picker field
+            Box(
+                modifier = Modifier
+                    .clickable {
+                        showDatePicker.value = true
+                    }
+                    .background(Color(0xFFFFA500), shape = RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+            ) {
+                TextField(
+                    value = deliveryDate,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    colors = TextFieldDefaults.colors(
+                        disabledContainerColor = Color(0xFFFFA500),
+                        disabledTextColor = Color.Black,
+                        disabledLabelColor = Color(0xFFA26D00)
+                    ),
+                    label = { Text("Delivery Date") }
+                )
+            }
+
+            // Start Time picker field
+            Box(
+                modifier = Modifier
+                    .clickable {
+                        showStartTimePicker.value = true
+                    }
+                    .background(Color(0xFFFFA500), shape = RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+            ) {
+                TextField(
+                    value = deliveryStart,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    colors = TextFieldDefaults.colors(
+                        disabledContainerColor = Color(0xFFFFA500),
+                        disabledTextColor = Color.Black,
+                        disabledLabelColor = Color(0xFFA26D00)
+                    ),
+                    label = { Text("Start Time") }
+                )
+            }
+
+            // End Time picker field
+            Box(
+                modifier = Modifier
+                    .clickable {
+                        showEndTimePicker.value = true
+                    }
+                    .background(Color(0xFFFFA500), shape = RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+            ) {
+                TextField(
+                    value = deliveryEnd,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    colors = TextFieldDefaults.colors(
+                        disabledContainerColor = Color(0xFFFFA500),
+                        disabledTextColor = Color.Black,
+                        disabledLabelColor = Color(0xFFA26D00)
+                    ),
+                    label = { Text("End Time") }
+                )
+            }
+
+            // Status dropdown
+            ExposedDropdownMenuBox(
+                expanded = expandedStatus,
+                onExpandedChange = { expandedStatus = it }
+            ) {
+                TextField(
+                    value = status,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Status") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) },
+                    modifier = Modifier.menuAnchor(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFFFA500),
+                        unfocusedLabelColor = Color(0xFFA26D00)
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedStatus,
+                    onDismissRequest = { expandedStatus = false }
+                ) {
+                    statuses.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                status = option
+                                expandedStatus = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Action buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        if (orderID.isBlank()) {
+                            Toast.makeText(context, "Please select an order", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        val updatedDelivery = Delivery(
+                            Delivery_ID = delivery.value?.Delivery_ID ?: 0,
+                            Order_ID = orderID.toInt(),
+                            deliveryDate = LocalDate.parse(deliveryDate),
+                            deliveryStart = LocalTime.parse(deliveryStart),
+                            deliveryEnd = LocalTime.parse(deliveryEnd),
+                            status = status
+                        )
+
+                        if (deliveryID != null) {
+                            // Update existing delivery
+                            val result = deliveryHandler.UpdateData(updatedDelivery)
+                            if (result > 0) {
+                                Toast.makeText(context, "Delivery Updated", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Update Failed", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            // Insert new delivery
+                            if (deliveryHandler.insertData(updatedDelivery)) {
+                                Toast.makeText(context, "Delivery Added Successfully", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Text("Save")
+                }
+
+                Button(
+                    onClick = { navController.popBackStack() },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
+                    Text("Cancel")
+                }
+            }
+
+            // Date Picker Dialog
+            if (showDatePicker.value) {
+                DatePickerDialog(
+                    onDismissRequest = { showDatePicker.value = false },
+                    confirmButton = {
+                        Button(onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                val selectedDate = Instant.ofEpochMilli(millis)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                                deliveryDate = selectedDate.toString()
+                            }
+                            showDatePicker.value = false
+                        }) { Text("OK") }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
+
+            // Time Picker Dialogs
+            if (showStartTimePicker.value) {
+                TimePickerDialog(
+                    onDismissRequest = { showStartTimePicker.value = false },
+                    onTimeSelected = { hour, minute ->
+                        deliveryStart = LocalTime.of(hour, minute).toString()
+                        showStartTimePicker.value = false
+                    }
+                )
+            }
+
+            if (showEndTimePicker.value) {
+                TimePickerDialog(
+                    onDismissRequest = { showEndTimePicker.value = false },
+                    onTimeSelected = { hour, minute ->
+                        deliveryEnd = LocalTime.of(hour, minute).toString()
+                        showEndTimePicker.value = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// Custom Time Picker Dialog
+@Composable
+fun TimePickerDialog(
+    onDismissRequest: () -> Unit,
+    onTimeSelected: (hour: Int, minute: Int) -> Unit
+) {
+    var hour by remember { mutableStateOf(12) }
+    var minute by remember { mutableStateOf(0) }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Select Time",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Hours
+                    Column {
+                        Text("Hour", style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = hour.toString(),
+                            onValueChange = { value ->
+                                value.toIntOrNull()?.let {
+                                    if (it in 0..23) hour = it
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(80.dp)
+                        )
+                    }
+
+                    Text(":", style = MaterialTheme.typography.headlineMedium)
+
+                    // Minutes
+                    Column {
+                        Text("Minute", style = MaterialTheme.typography.bodySmall)
+                        OutlinedTextField(
+                            value = minute.toString(),
+                            onValueChange = { value ->
+                                value.toIntOrNull()?.let {
+                                    if (it in 0..59) minute = it
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(80.dp)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismissRequest) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = { onTimeSelected(hour, minute) }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            }
+        }
+    }
+}
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DeliveryInsert(navController: NavController) {
+    DeliveryEdit(navController = navController)
 }

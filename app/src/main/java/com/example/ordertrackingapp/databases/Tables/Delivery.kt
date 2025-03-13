@@ -8,30 +8,35 @@ import kotlin.collections.List
 import kotlin.reflect.full.memberProperties
 
 class Delivery {
-    var Delivery_ID: Int = 0 // Primary Key
-    var OrderID: MutableList<Order> = mutableListOf() //FK order
+    var Delivery_ID: Int = 0
+    var Order_ID: Int = 0
     @RequiresApi(Build.VERSION_CODES.O)
-    var DeliveryStart: LocalTime = LocalTime.MIDNIGHT
+    var deliveryDate: LocalDate = LocalDate.now()
     @RequiresApi(Build.VERSION_CODES.O)
-    var DeliveryEnd: LocalTime = LocalTime.MIDNIGHT
+    var deliveryStart: LocalTime = LocalTime.now()
     @RequiresApi(Build.VERSION_CODES.O)
-    var DeliveryDate: LocalDate = LocalDate.now()
-    var Status: String = ""
+    var deliveryEnd: LocalTime = LocalTime.now()
+    var status: String = ""
 
-    // Returns columns
-    fun getColumns(): List<String> {
-        val properties = this::class.memberProperties.map { it.name }
-        val idColumns = properties.filter { it.endsWith("_ID") }
-        val otherColumns = properties.filterNot { it.endsWith("_ID") }
-
-        return idColumns + otherColumns // Ensures ID columns come first
+    @RequiresApi(Build.VERSION_CODES.O)
+    constructor(
+        Delivery_ID: Int, Order_ID: Int, deliveryDate: LocalDate,
+        deliveryStart: LocalTime, deliveryEnd: LocalTime, status: String
+    ) {
+        this.Delivery_ID = Delivery_ID
+        this.Order_ID = Order_ID
+        this.deliveryDate = deliveryDate
+        this.deliveryStart = deliveryStart
+        this.deliveryEnd = deliveryEnd
+        this.status = status
     }
 
-    // Gets table name by removing `_ID`
-    fun getTableName(): String {
-        return this::class.memberProperties
-            .firstOrNull { it.name.endsWith("_ID") }
-            ?.name?.removeSuffix("_ID") ?: "UnknownTable"
-    }
+    constructor()
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun toString(): String {
+        return "Delivery(deliveryID=$Delivery_ID, orderID=$Order_ID, " +
+                "orderDate=$deliveryDate, orderStart=$deliveryStart, orderEnd=$deliveryEnd, " +
+                "status=$status)"
+    }
 }

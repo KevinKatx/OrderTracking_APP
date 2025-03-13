@@ -37,6 +37,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.ordertrackingapp.databases.DatabaseHelper
 
 
@@ -143,7 +145,7 @@ class CustomButton(
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = "login") {
         composable("home") {
             HomeScreen(navController = navController, context)
         }
@@ -152,6 +154,9 @@ fun AppNavigation() {
             LoginScreen(navController = navController) // Your Login Screen Composable
         }
 
+        composable("delivery"){
+            DeliveryScreen(navController = navController)
+        }
 
         composable("analytics") {
             AnalyticsScreen(navController = navController)
@@ -216,7 +221,17 @@ fun AppNavigation() {
             SeePromo(navController=navController)
         }
 
+        composable("delivery_insert") {
+            DeliveryInsert(navController)
+        }
 
+        composable(
+            "delivery_edit/{deliveryID}",
+            arguments = listOf(navArgument("deliveryID") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val deliveryID = backStackEntry.arguments?.getInt("deliveryID")
+            DeliveryEdit(navController, deliveryID)
+        }
 
     }
 }
@@ -373,7 +388,9 @@ fun HomeScreen(navController: NavController, context: Context){
                 navController.navigate("customer")
             })
 
-
+            DeliveryBTN(onClick = {
+                navController.navigate("delivery")
+            })
 
             LogoutBTN(
                 onClick = {
@@ -392,6 +409,15 @@ fun HomeScreen(navController: NavController, context: Context){
     }
 }
 
+@Composable
+fun DeliveryBTN(onClick: () -> Unit){
+    val myButton = CustomButton(
+        label = "Delivery",
+        onClick = onClick,
+        iconId = R.drawable.delivery
+    )
+    myButton.CreateButton()
+}
 
 
 @Composable
@@ -435,7 +461,7 @@ fun AnalyticsBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
         label = "Analytics",
         onClick = onClick,
-        iconId = R.drawable.delivery, // Replace with your icon
+        iconId = R.drawable.analytics, // Replace with your icon
     )
 
     // Use the CreateButton function to display the button
