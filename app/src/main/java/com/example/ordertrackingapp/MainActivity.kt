@@ -399,29 +399,38 @@ fun HomeScreen(navController: NavController, context: Context){
         )
         Column(
             modifier = Modifier
-                .offset(y= 110.dp)
+                .offset(y= 50.dp)
         ){
+            Row(
 
-            OrderBTN(onClick = {
-                navController.navigate("order")
-            })
-            ProductsBTN(onClick = {
-                navController.navigate("products")
-            })
-            PromoBTN(onClick = {
-                navController.navigate("promo")
-            })
-            AnalyticsBTN(onClick = {
-                navController.navigate("analytics")
-            })
+            ){
+                OrderBTN(onClick = {
+                    navController.navigate("order")
+                })
+                ProductsBTN(onClick = {
+                    navController.navigate("products")
+                })
+            }
 
-            CustomerBTN(onClick = {
-                navController.navigate("customer")
-            })
+            Row(){
+                PromoBTN(onClick = {
+                    navController.navigate("promo")
+                })
+                AnalyticsBTN(onClick = {
+                    navController.navigate("analytics")
+                })
+            }
 
-            DeliveryBTN(onClick = {
-                navController.navigate("delivery")
-            })
+            Row(){
+                CustomerBTN(onClick = {
+                    navController.navigate("customer")
+                })
+
+                DeliveryBTN(onClick = {
+                    navController.navigate("delivery")
+                })
+            }
+
 
             LogoutBTN(
                 onClick = {
