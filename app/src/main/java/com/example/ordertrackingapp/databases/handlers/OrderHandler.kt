@@ -10,11 +10,12 @@ import com.example.ordertrackingapp.databases.DatabaseHelper
 import android.os.Build
 import com.example.ordertrackingapp.databases.Tables.Order
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class OrderHandler(private val context: Context) {
 
     private val dbHelper = DatabaseHelper(context)
-
+    private val deliveryHandler = DeliveryHandler(context)
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun insertData(order: Order): Boolean {
@@ -100,6 +101,15 @@ class OrderHandler(private val context: Context) {
         }
 
         val result = db.update("Orders", cv, "orderID = ?", arrayOf(order.orderID.toString()))
+
+        if (order.status == "Completed") {
+            deliveryHandler.insertDelivery(order.orderID)
+        } else if(order.status == "Pending"){
+            deliveryHandler.deleteDeliveryByOrderID(order.orderID)
+        }
+
+
+
         db.close()
         return result // Returns number of rows affected
     }
@@ -138,5 +148,8 @@ class OrderHandler(private val context: Context) {
 
         return latestOrderID
     }
+
+
+
 
 }

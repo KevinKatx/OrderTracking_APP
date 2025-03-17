@@ -1,5 +1,6 @@
 package com.example.ordertrackingapp
 
+
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,6 +45,8 @@ import com.example.ordertrackingapp.databases.Tables.User
 import com.example.ordertrackingapp.databases.handlers.UserHandler
 import kotlinx.coroutines.launch
 import androidx.compose.material.*
+import androidx.lifecycle.ViewModelProvider
+import com.example.ordertrackingapp.databases.handlers.AnalyticsHandler
 
 
 
@@ -52,6 +55,10 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val dbHelper = DatabaseHelper(this)
+        val db = dbHelper.writableDatabase
+        val analyticsHandler = AnalyticsHandler(db) // Make sure you properly initialize this
+        val chatViewModel: ChatViewModel = ViewModelProvider(this, ChatViewModelFactory(dbHelper)).get(ChatViewModel::class.java)
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -62,8 +69,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+
             OrderTrackingAPPTheme {
-                AppNavigation()
+                AppNavigation(chatViewModel)
+
 
             }
         }
@@ -141,12 +150,9 @@ class CustomButton(
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-@Preview(showBackground = true,
-    widthDp=360,
-    heightDp=806
-)
+
 @Composable
-fun AppNavigation() {
+fun AppNavigation(chatViewModel: ChatViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
     NavHost(navController = navController, startDestination = "login") {
@@ -239,6 +245,10 @@ fun AppNavigation() {
         ) { backStackEntry ->
             val deliveryID = backStackEntry.arguments?.getInt("deliveryID")
             DeliveryEdit(navController, deliveryID)
+        }
+
+        composable("chatbot"){
+            ChatScreen(viewModel = chatViewModel)
         }
 
     }
@@ -431,15 +441,23 @@ fun HomeScreen(navController: NavController, context: Context){
                 })
             }
 
+            Row(){
+                ChatbotBTN(onClick = {
+                    navController.navigate("chatbot")
+                })
+                LogoutBTN(
+                    onClick = {
+                        // You can add logic here if needed, such as logging out the user
+                        // Example: Clear user session or show a message
+                        Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
+                    },
+                    navController = navController // Pass the NavController here
+                )
 
-            LogoutBTN(
-                onClick = {
-                    // You can add logic here if needed, such as logging out the user
-                    // Example: Clear user session or show a message
-                    Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
-                },
-                navController = navController // Pass the NavController here
-            )
+            }
+
+
+
 
 
 
@@ -533,6 +551,20 @@ fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
     // Use the CreateButton function to display the button
     myButton.CreateButton()
 }
+
+@Composable
+fun ChatbotBTN(onClick: () -> Unit) {
+    val myButton = CustomButton(
+        label = "Customer",
+        onClick = onClick,
+        iconId = R.drawable.chatbot, // Replace with your icon
+    )
+
+    // Use the CreateButton function to display the button
+    myButton.CreateButton()
+}
+
+
 
 @Composable
 fun PromoBTN(onClick: () -> Unit) {

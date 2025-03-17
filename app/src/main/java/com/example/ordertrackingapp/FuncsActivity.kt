@@ -2708,6 +2708,7 @@ fun DeliveryScreen(navController: NavController) {
 
     // Log deliveries when the screen is first composed
     LaunchedEffect(Unit) {
+        refreshDeliveries()
         Log.d("DB_DEBUG", "Deliveries retrieved: ${deliveries.value}")
     }
 

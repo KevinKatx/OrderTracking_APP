@@ -26,9 +26,11 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "FoodStopDB",
                     "deliveryID INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "orderID INTEGER, " +
                     "deliveryDate TEXT DEFAULT (date('now')), " +
-                    "deliveryStart TEXT DEFAULT (time('now')), " +
-                    "deliveryEnd TEXT DEFAULT (time('now')), " +
-                    "status TEXT CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Cancelled')))"
+                    "deliveryStart TEXT, " +
+                    "deliveryEnd TEXT, " +
+                    "status TEXT CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Cancelled'))," +
+                    "FOREIGN KEY(orderID) REFERENCES Orders(orderID)" +
+                    ")"
         )
 
         db?.execSQL(

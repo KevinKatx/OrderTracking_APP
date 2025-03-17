@@ -123,4 +123,32 @@ class DeliveryHandler (private val context: Context){
             false
         }
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun insertDelivery(orderID: Int) {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("orderID", orderID)
+            put("status", "Pending") // Default status for new deliveries
+            put("deliveryDate", LocalDate.now().toString()) // Example: today's date
+        }
+        db.insert("Delivery", null, values)
+        db.close()
+    }
+
+    fun deleteDeliveryByOrderID(orderID: Int) {
+        val db = dbHelper.writableDatabase
+        db.delete("Delivery", "orderID = ?", arrayOf(orderID.toString()))
+        db.close()
+    }
+
+    fun deliveryExistsForOrder(orderID: Int): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM Delivery WHERE orderID = ?", arrayOf(orderID.toString()))
+        val exists = if (cursor.moveToFirst()) cursor.getInt(0) > 0 else false
+        cursor.close()
+        db.close()
+        return exists
+    }
+
 }
