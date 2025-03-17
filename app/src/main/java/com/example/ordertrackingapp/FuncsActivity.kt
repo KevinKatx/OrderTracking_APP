@@ -3099,6 +3099,11 @@ fun DeliveryEdit(navController: NavController, deliveryID: Int? = null) {
                             onClick = {
                                 status = option
                                 expandedStatus = false
+
+                                // Set deliveryEnd to current time if status is "Delivered"
+                                if (option == "Delivered") {
+                                    deliveryEnd = LocalTime.now().toString()
+                                }
                             }
                         )
                     }
