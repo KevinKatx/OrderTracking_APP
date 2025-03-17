@@ -63,6 +63,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -1686,9 +1687,14 @@ fun AnalyticsScreen(navController: NavHostController) {
 
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
-    // State for selected dates
-    val startDate = remember { mutableStateOf(dateFormatter.format(Date())) }
-    val endDate = remember { mutableStateOf(dateFormatter.format(Date())) }
+    val calendar = Calendar.getInstance()
+    val endDateValue = dateFormatter.format(calendar.time) // Get current date as endDate
+
+    calendar.add(Calendar.DAY_OF_YEAR, -7) // Subtract 7 days for startDate
+    val startDateValue = dateFormatter.format(calendar.time)
+
+    val startDate = remember { mutableStateOf(startDateValue) }
+    val endDate = remember { mutableStateOf(endDateValue) }
     var topOrders by remember { mutableStateOf(emptyList<Pair<String, Int>>()) }
     var freqBoughtTogether by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
 

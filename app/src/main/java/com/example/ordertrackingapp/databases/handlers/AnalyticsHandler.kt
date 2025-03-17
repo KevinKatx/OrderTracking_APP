@@ -159,7 +159,7 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
         val query = """
         SELECT COUNT(*) 
         FROM Orders 
-        WHERE strftime('%Y-%m', order_date) = strftime('%Y-%m', 'now')
+        WHERE strftime('%Y-%m', OrderDate) = strftime('%Y-%m', 'now')
     """.trimIndent()
 
         val cursor = db.rawQuery(query, null)
