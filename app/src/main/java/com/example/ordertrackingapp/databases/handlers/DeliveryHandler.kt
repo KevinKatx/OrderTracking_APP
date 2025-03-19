@@ -35,8 +35,8 @@ class DeliveryHandler (private val context: Context){
             Log.e("DB_ERROR", "Insert failed")
             false
         } else {
-            Toast.makeText(context, "Insert Order Successful", Toast.LENGTH_SHORT).show()
-            Log.d("DB_SUCCESS", "Insert Order successful with ID: $result")
+            Toast.makeText(context, "Insert Delivery Successful", Toast.LENGTH_SHORT).show()
+            Log.d("DB_SUCCESS", "Insert Delivery successful with ID: $result")
             true
         }
     }
@@ -95,9 +95,9 @@ class DeliveryHandler (private val context: Context){
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun UpdateData(delivery: Delivery): Int{
+    fun UpdateData(delivery: Delivery): Int {
         val db = dbHelper.writableDatabase
-        val cv = ContentValues().apply{
+        val cv = ContentValues().apply {
             put("deliveryID", delivery.Delivery_ID)
             put("orderID", delivery.Order_ID)
             put("deliveryDate", delivery.deliveryDate.toString())
@@ -151,4 +151,57 @@ class DeliveryHandler (private val context: Context){
         return exists
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun createDeliveryForCompletedOrder(orderID: Int) {
+        val deliveryExists = checkDeliveryExistsForOrder(orderID)
+
+        if (!deliveryExists) {
+            // Get the next available Delivery_ID
+            val nextDeliveryId = getNextDeliveryId()
+
+            val newDelivery = Delivery(
+                Delivery_ID = nextDeliveryId,  // Add this line
+                Order_ID = orderID,
+                deliveryDate = LocalDate.now(),
+                deliveryStart = LocalTime.now(),
+                deliveryEnd = LocalTime.now().plusHours(1),
+                status = "Pending"
+            )
+
+            insertData(newDelivery)
+            Log.d("DELIVERY_CREATE", "Automatically created delivery for completed order #$orderID with delivery ID #$nextDeliveryId")
+        }
+    }
+
+    private fun getNextDeliveryId(): Int {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT MAX(deliveryID) FROM Delivery", null)
+
+        var maxId = 0
+        if (cursor.moveToFirst()) {
+            maxId = cursor.getInt(0)
+        }
+        cursor.close()
+        db.close()
+
+        return maxId + 1
+    }
+
+    private fun checkDeliveryExistsForOrder(orderID: Int): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.query(
+            "Delivery",
+            null,
+            "orderID = ?",
+            arrayOf(orderID.toString()),
+            null,
+            null,
+            null
+        )
+
+        val exists = cursor.count > 0
+        cursor.close()
+        db.close()
+        return exists
+    }
 }

@@ -555,7 +555,7 @@ fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
 @Composable
 fun ChatbotBTN(onClick: () -> Unit) {
     val myButton = CustomButton(
-        label = "Customer",
+        label = "Chatbot",
         onClick = onClick,
         iconId = R.drawable.chatbot, // Replace with your icon
     )
