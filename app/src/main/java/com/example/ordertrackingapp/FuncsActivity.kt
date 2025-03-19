@@ -724,6 +724,11 @@ fun OrderInsert(navController: NavController) {
     var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair
     var selectedPromo by remember { mutableStateOf<Promos?>(null) }
 
+
+
+
+
+
     fun calculateUpdatedPrice() {
         updatedPrice = selectedPromo?.let { promo ->
             var discountedPrice = totalPrice
@@ -2102,7 +2107,11 @@ fun SelectProducts(navController: NavController) {
             text = {
                 OutlinedTextField(
                     value = quantity,
-                    onValueChange = { quantity = it },
+                    onValueChange = { newValue ->
+                        if (newValue.all { it.isDigit() }) { // Ensure only numbers are entered
+                            quantity = newValue
+                        }
+                    },
                     label = { Text("Quantity") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -2217,10 +2226,12 @@ fun PromoInsert(navController: NavController){
                             if(option=="Flat") {
                                 flatField = true
                                 percentField = false
+                                discountPercent = "0"
                             }
                             else if (option=="Percentage"){
                                 flatField=false
                                 percentField=true
+                                discountFlat = "0"
                             }
 
                         })
@@ -2367,9 +2378,11 @@ fun PromoEdit(navController: NavController, promoID: Int? = null) {
                                 if (option == "Flat") {
                                     flatField = true
                                     percentField = false
+                                    discountPercent = "0"
                                 } else if (option == "Percentage") {
                                     flatField = false
                                     percentField = true
+                                    discountFlat = "0"
                                 }
                             }
                         )

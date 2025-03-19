@@ -149,6 +149,8 @@ class CustomButton(
     }
 }
 
+
+
 @RequiresApi(Build.VERSION_CODES.O)
 
 @Composable
@@ -447,8 +449,7 @@ fun HomeScreen(navController: NavController, context: Context){
                 })
                 LogoutBTN(
                     onClick = {
-                        // You can add logic here if needed, such as logging out the user
-                        // Example: Clear user session or show a message
+                        navController.navigate("login") // Navigate to login screen
                         Toast.makeText(LocalContext.current, "Logging out...", Toast.LENGTH_SHORT).show()
                     },
                     navController = navController // Pass the NavController here
@@ -477,16 +478,6 @@ fun DeliveryBTN(onClick: () -> Unit){
     myButton.CreateButton()
 }
 
-
-@Composable
-fun AddOrderBTN(onClick: () -> Unit){
-    val myButton = CustomButton(
-        label = "Add Order",
-        onClick = onClick,
-        iconId = R.drawable.order,
-    )
-    myButton.CreateButton()
-}
 
 
 
@@ -540,12 +531,12 @@ fun CustomerBTN(onClick: () -> Unit) {
 
 @Composable
 fun LogoutBTN(onClick:  @Composable () -> Unit, navController: NavController) {
-    val myButton = CustomButton(
+    val myButton =CustomButton(
         label = "Logout",
-        onClick = {
-            navController.navigate("login") // Navigate to login screen
-        },
-        iconId = R.drawable.logout, // Replace with your icon
+        onClick = { /* Handle button click */ },
+        iconId = R.drawable.logout, // Replace with your actual icon resource ID
+        backgroundColor = Color.Black, // Inverted background color
+        contentColor = Color(0xFFF6B819) // Inverted content color
     )
 
     // Use the CreateButton function to display the button
