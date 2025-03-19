@@ -102,7 +102,8 @@ fun ChatScreen(viewModel: ChatViewModel = viewModel(factory = ChatViewModelFacto
                         userInput = ""
                     }
                 },
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
             ) {
                 Text("Send")
             }

@@ -21,27 +21,37 @@ class OrderHandler(private val context: Context) {
     fun insertData(order: Order): Boolean {
         val db = dbHelper.writableDatabase
         val cv = ContentValues().apply {
+            // Skip orderID as it's auto-incremented
             put("customerID", order.customerID)
-            put("PromoID", order.promoID)
-            put("TotalPrice", order.totalPrice)
-            put("Status", order.status)
-            put("OrderDate", order.orderDate.toString()) // Ensure it's stored as a string
-            put("PaymentType", order.paymentType)
+            put("totalPrice", order.totalPrice)
+            put("promoID", order.promoID)
+            put("status", order.status)
+            put("orderDate", order.orderDate.toString())
+            put("paymentType", order.paymentType)
         }
 
         val result = db.insert("Orders", null, cv)
         db.close()
 
-        Log.d("DB_INSERT", "Insert Order result: $result")
-        return if (result == -1L) {
-            Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
-            Log.e("DB_ERROR", "Insert failed")
-            false
-        } else {
+        val success = result != -1L
+
+        if (success) {
+            // If order was inserted successfully and status is "Completed", create a delivery
+            if (order.status == "Completed") {
+                val deliveryHandler = DeliveryHandler(context)
+                // Get the latest order ID that was just inserted
+                val latestOrderID = getLatestOrderID()
+                deliveryHandler.createDeliveryForCompletedOrder(latestOrderID)
+            }
+
             Toast.makeText(context, "Insert Order Successful", Toast.LENGTH_SHORT).show()
             Log.d("DB_SUCCESS", "Insert Order successful with ID: $result")
-            true
+        } else {
+            Toast.makeText(context, "Insert Failed", Toast.LENGTH_SHORT).show()
+            Log.e("DB_ERROR", "Insert failed")
         }
+
+        return success
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -93,26 +103,25 @@ class OrderHandler(private val context: Context) {
         val db = dbHelper.writableDatabase
         val cv = ContentValues().apply {
             put("customerID", order.customerID)
-            put("TotalPrice", order.totalPrice)
-            put("PromoID", order.promoID)
-            put("Status", order.status)
-            put("OrderDate", order.orderDate.toString()) // Convert LocalDate to String
-            put("PaymentType", order.paymentType)
+            put("totalPrice", order.totalPrice)
+            put("promoID", order.promoID)
+            put("status", order.status)
+            put("orderDate", order.orderDate.toString())
+            put("paymentType", order.paymentType)
         }
 
         val result = db.update("Orders", cv, "orderID = ?", arrayOf(order.orderID.toString()))
+        db.close()
 
+        // If order was updated to "Completed" status, create a delivery if it doesn't exist
         if (order.status == "Completed") {
-            deliveryHandler.insertDelivery(order.orderID)
-        } else if(order.status == "Pending"){
-            deliveryHandler.deleteDeliveryByOrderID(order.orderID)
+            val deliveryHandler = DeliveryHandler(context)
+            deliveryHandler.createDeliveryForCompletedOrder(order.orderID)
         }
 
-
-
-        db.close()
-        return result // Returns number of rows affected
+        return result
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun deleteData(productID: Int): Boolean {
         val db = dbHelper.writableDatabase

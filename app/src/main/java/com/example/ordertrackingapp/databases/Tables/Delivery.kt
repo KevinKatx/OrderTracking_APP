@@ -2,6 +2,7 @@ package com.example.ordertrackingapp.databases.Tables
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.example.ordertrackingapp.databases.DatabaseHelper
 import java.time.LocalTime
 import java.time.LocalDate
 import kotlin.collections.List
@@ -31,7 +32,15 @@ class Delivery {
         this.status = status
     }
 
-    constructor()
+    @RequiresApi(Build.VERSION_CODES.O)
+    constructor(Order_ID: Int, deliveryDate: LocalDate,
+                deliveryStart: LocalTime, deliveryEnd: LocalTime, status: String) {
+        this.Order_ID = Order_ID
+        this.deliveryDate = deliveryDate
+        this.deliveryStart = deliveryStart
+        this.deliveryEnd = deliveryEnd
+        this.status = status
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun toString(): String {
@@ -40,3 +49,4 @@ class Delivery {
                 "status=$status)"
     }
 }
+

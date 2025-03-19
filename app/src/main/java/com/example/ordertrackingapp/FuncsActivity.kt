@@ -1756,7 +1756,10 @@ fun AnalyticsScreen(navController: NavHostController) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = { showStartDatePicker.value = true }) {
+            Button(onClick = { showStartDatePicker.value = true },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+            ) {
                 Text(startDate.value)
             }
 
@@ -1766,7 +1769,9 @@ fun AnalyticsScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.width(20.dp))
 
-            Button(onClick = { showEndDatePicker.value = true }) {
+            Button(onClick = { showEndDatePicker.value = true },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
                 Text(endDate.value)
             }
 
@@ -1781,7 +1786,10 @@ fun AnalyticsScreen(navController: NavHostController) {
                 }
                 fetchOrders()
 
-            }) {
+            },
+                shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
+                ) {
                 Text("Update")
             }
         }
@@ -2056,7 +2064,8 @@ fun SelectProducts(navController: NavController) {
                 .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = { navController.popBackStack() }) {
+            Button(onClick = { navController.popBackStack() },shape = RoundedCornerShape(0.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))) {
                 Text("Cancel")
             }
 
@@ -3206,6 +3215,12 @@ fun DeliveryEdit(navController: NavController, deliveryID: Int? = null) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DeliveryInsert(navController: NavController) {
+    DeliveryEdit(navController = navController)
+}
+
 // Custom Time Picker Dialog
 @Composable
 fun TimePickerDialog(
@@ -3285,9 +3300,4 @@ fun TimePickerDialog(
             }
         }
     }
-}
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun DeliveryInsert(navController: NavController) {
-    DeliveryEdit(navController = navController)
 }
