@@ -1,39 +1,34 @@
 package com.example.ordertrackingapp.databases.handlers
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import com.example.ordertrackingapp.databases.DatabaseHelper
 import com.example.ordertrackingapp.databases.Tables.OrderDetails
 import com.example.ordertrackingapp.databases.Tables.Products
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+
 class AnalyticsHandler(private val db: SQLiteDatabase) {
 
-    fun getAnalyticsSummary(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
+    fun getAnalyticsSummary(startDate:MutableState<String>, endDate:MutableState<String>): String {
         // Get first and last day of the current month
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
-        val startDate = mutableStateOf(dateFormat.format(calendar.time))
-
-        // Get last day of the month
-        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
-        val endDate = mutableStateOf(dateFormat.format(calendar.time))
-
         val topOrders = getTopOrders(startDate, endDate)
-        val ordersPerDay = getTotalOrders()
+        val ordersPerDay = getOrdersCount(startDate.value, endDate.value)
         val boughtTogether = freqBoughtTogether(startDate, endDate)
+        val productPrices = getItemPrices().joinToString("\n") { "${it.first}: ₱${it.second}" }
 
         val topOrdersText = topOrders.joinToString("\n") { "${it.first}: ${it.second} orders" }
         val ordersPerDayText = ordersPerDay.toString()
         val boughtTogetherText = boughtTogether.joinToString("\n") { "${it.first} & ${it.second}" }
 
         return """
-        Order Analytics Summary (From $startDate to $endDate):
+        Order Analytics Summary (From ${startDate.value} to ${endDate.value}):
         🔹 **Top Ordered Items**:
         $topOrdersText
         
@@ -42,7 +37,29 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
         
         🔹 **Frequently Bought Together**:
         $boughtTogetherText
+        
+        🔹 **ItemPrices**:
+        $productPrices
     """.trimIndent()
+    }
+
+
+
+    fun getItemPrices(): List<Pair<String, Double>> {
+        val itemPrices = mutableListOf<Pair<String, Double>>()
+
+        val query = "SELECT productName, price FROM Products"  // Adjust based on your DB schema
+        val cursor = db.rawQuery(query, null)
+
+        while (cursor.moveToNext()) {
+            val itemName = cursor.getString(0)
+            val price = cursor.getDouble(1)
+            itemPrices.add(itemName to price)
+        }
+
+        cursor.close()
+
+        return itemPrices
     }
 
 
@@ -155,22 +172,8 @@ class AnalyticsHandler(private val db: SQLiteDatabase) {
         return ordersCountList
     }
 
-    fun getTotalOrders(): Int {
-        val query = """
-        SELECT COUNT(*) 
-        FROM Orders 
-        WHERE strftime('%Y-%m', OrderDate) = strftime('%Y-%m', 'now')
-    """.trimIndent()
 
-        val cursor = db.rawQuery(query, null)
-        var totalOrders = 0
 
-        if (cursor.moveToFirst()) {
-            totalOrders = cursor.getInt(0)
-        }
-        cursor.close()
-        return totalOrders
-    }
 
 
 

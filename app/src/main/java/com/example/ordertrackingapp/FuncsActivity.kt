@@ -63,6 +63,7 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -286,6 +287,22 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
 
     val order = remember { mutableStateOf(orderID?.let { orderHandler.readData(it).firstOrNull() }) }
 
+    var customerSearchText by remember { mutableStateOf("") }
+
+
+    val filteredCustomers = remember(customers, customerSearchText) {
+        if (customerSearchText.isEmpty()) {
+            customers
+        } else {
+            customers.filter {
+                it.Name.contains(customerSearchText, ignoreCase = true) ||
+                        it.Customer_ID.toString().contains(customerSearchText)
+            }
+        }
+    }
+
+
+
     var customerID by remember { mutableStateOf(order.value?.customerID?.toString() ?: "") }
     var totalPrice by remember { mutableStateOf(0) }
     var status by remember { mutableStateOf(order.value?.status ?: "") }
@@ -448,11 +465,14 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                 onExpandedChange = { expandedCustomer = it }
             ) {
                 TextField(
-                    value = if (customerID.isNotBlank()) {
-                        customers.find { it.Customer_ID.toString() == customerID }?.Name ?: ""
-                    } else "",
-                    onValueChange = {},
-                    readOnly = true,
+                    value = customerSearchText,
+                    onValueChange = {
+                        customerSearchText = it
+                        // Automatically expand the dropdown when typing
+                        if (!expandedCustomer && it.isNotEmpty()) {
+                            expandedCustomer = true
+                        }
+                    },
                     label = { Text("Customer") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCustomer)
@@ -461,20 +481,31 @@ fun OrderEdit(navController: NavController, orderID: Int? = null) {
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFFFA500),
                         unfocusedLabelColor = Color(0xFFA26D00)
-                    )
+                    ),
+                    placeholder = { Text("Type to search customers") }
                 )
+
+                // Show filtered results in dropdown
                 ExposedDropdownMenu(
                     expanded = expandedCustomer,
                     onDismissRequest = { expandedCustomer = false }
                 ) {
-                    customers.forEach { customer ->
+                    if (filteredCustomers.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("${customer.Customer_ID}: ${customer.Name}") },
-                            onClick = {
-                                customerID = customer.Customer_ID.toString()
-                                expandedCustomer = false
-                            }
+                            text = { Text("No matching customers") },
+                            onClick = { /* Do nothing */ }
                         )
+                    } else {
+                        filteredCustomers.forEach { customer ->
+                            DropdownMenuItem(
+                                text = { Text("${customer.Customer_ID}: ${customer.Name}") },
+                                onClick = {
+                                    customerID = customer.Customer_ID.toString()
+                                    customerSearchText = customer.Name
+                                    expandedCustomer = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -706,6 +737,21 @@ fun OrderInsert(navController: NavController) {
     var expandedCustomer by remember { mutableStateOf(false) }
 
 
+    // Add a new state for the customer search text
+    var customerSearchText by remember { mutableStateOf("") }
+    // Filtered customers list based on search text
+    val filteredCustomers = remember(customers, customerSearchText) {
+        if (customerSearchText.isEmpty()) {
+            customers
+        } else {
+            customers.filter {
+                it.Name.contains(customerSearchText, ignoreCase = true) ||
+                        it.Customer_ID.toString().contains(customerSearchText)
+            }
+        }
+    }
+
+
 
     var tempOrderID by remember { mutableStateOf(orderHandler.getLatestOrderID()) }
     var orderID by remember { mutableStateOf("") }
@@ -723,10 +769,6 @@ fun OrderInsert(navController: NavController) {
 
     var selectedProducts by remember { mutableStateOf<List<Pair<Products, Int>>>(emptyList()) } // Product + Quantity Pair
     var selectedPromo by remember { mutableStateOf<Promos?>(null) }
-
-
-
-
 
 
     fun calculateUpdatedPrice() {
@@ -826,11 +868,14 @@ fun OrderInsert(navController: NavController) {
                 onExpandedChange = { expandedCustomer = it }
             ) {
                 TextField(
-                    value = if (customerID.isNotBlank()) {
-                        customers.find { it.Customer_ID.toString() == customerID }?.Name ?: ""
-                    } else "",
-                    onValueChange = {},
-                    readOnly = true,
+                    value = customerSearchText,
+                    onValueChange = {
+                        customerSearchText = it
+                        // Automatically expand the dropdown when typing
+                        if (!expandedCustomer && it.isNotEmpty()) {
+                            expandedCustomer = true
+                        }
+                    },
                     label = { Text("Customer") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCustomer)
@@ -839,20 +884,29 @@ fun OrderInsert(navController: NavController) {
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFFFFA500),
                         unfocusedLabelColor = Color(0xFFA26D00)
-                    )
+                    ),
+                    placeholder = { Text("Type to search customers") }
                 )
                 ExposedDropdownMenu(
                     expanded = expandedCustomer,
                     onDismissRequest = { expandedCustomer = false }
                 ) {
-                    customers.forEach { customer ->
+                    if (filteredCustomers.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("${customer.Customer_ID}: ${customer.Name}") },
-                            onClick = {
-                                customerID = customer.Customer_ID.toString()
-                                expandedCustomer = false
-                            }
+                            text = { Text("No matching customers") },
+                            onClick = { /* Do nothing */ }
                         )
+                    } else {
+                        filteredCustomers.forEach { customer ->
+                            DropdownMenuItem(
+                                text = { Text("${customer.Customer_ID}: ${customer.Name}") },
+                                onClick = {
+                                    customerID = customer.Customer_ID.toString()
+                                    customerSearchText = customer.Name
+                                    expandedCustomer = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -2701,6 +2755,8 @@ fun DeliveryScreen(navController: NavController) {
     val deliveries = remember { mutableStateOf(deliveryHandler.readData()) }
     var selectedDelivery by remember { mutableStateOf<Delivery?>(null) }
 
+
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     // Add search functionality
     var searchQuery by remember { mutableStateOf("") }
 
@@ -2712,6 +2768,10 @@ fun DeliveryScreen(navController: NavController) {
         } else {
             null
         }
+    }
+
+    fun formatTime(time: LocalTime?): String {
+        return time?.format(timeFormatter) ?: "N/A"
     }
 
     // Filter deliveries based on search query
@@ -2880,7 +2940,7 @@ fun DeliveryScreen(navController: NavController) {
 
                                         Column {
                                             Text("Delivery Time", fontWeight = FontWeight.Bold)
-                                            Text("${delivery.deliveryStart} - ${delivery.deliveryEnd}")
+                                            Text("${formatTime(delivery.deliveryStart)} - ${formatTime(delivery.deliveryEnd)}")
                                         }
                                     }
                                 }
